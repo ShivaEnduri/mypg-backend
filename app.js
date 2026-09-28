@@ -66,14 +66,59 @@ import otpRoutes
 const app =
   express();
 
+// /* ============================================================
+//    CORS
+// ============================================================ */
+
+// app.use(
+//   cors({
+//     origin:
+//       "http://localhost:5173",
+      
+
+//     methods: [
+//       "GET",
+//       "POST",
+//       "PATCH",
+//       "PUT",
+//       "DELETE",
+//       "OPTIONS",
+//     ],
+
+//     allowedHeaders: [
+//       "Content-Type",
+//       "Authorization",
+//     ],
+//   })
+// );
+
 /* ============================================================
    CORS
 ============================================================ */
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://my-2k1f2ldzz-shiva-enduris-projects.vercel.app",
+];
+
 app.use(
   cors({
-    origin:
-      "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow Postman/server-to-server requests
+      if (!origin) {
+        return callback(null, true);
+      }
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.log("CORS blocked origin:", origin);
+
+      return callback(
+        new Error(`CORS blocked for origin: ${origin}`)
+      );
+    },
 
     methods: [
       "GET",
@@ -88,6 +133,8 @@ app.use(
       "Content-Type",
       "Authorization",
     ],
+
+    credentials: true,
   })
 );
 

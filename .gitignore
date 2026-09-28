@@ -41,3 +41,6 @@ serviceAccountKey.json
 # Google Cloud credentials
 serviceAccountKey.json
 **/serviceAccountKey.json
+
+# Database backups
+*.sql
