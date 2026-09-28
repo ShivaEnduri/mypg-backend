@@ -1,0 +1,150 @@
+{
+  "pgdb": {
+
+    "pg-alerts": {
+        "tableName": "dy_pg_alerts"
+      },
+      "pg_invoices":{
+        "tableName":"dy_invoices"
+      },
+      "pg_payments_info":{
+        "tableName":"dy_payments_info"
+
+      },
+      "pg_bookings":{
+        "tableName":"dy_pg_bookings"
+      },
+      "pg_receipts":{
+        "tableName":"dy_receipts"
+      },
+
+
+      "pg-amns-map": {
+        "tableName": "dy_pg_amns_map"
+      },
+      "pg-bed-info": {
+        "tableName": "dy_pg_bed_info"
+      },
+      "pg-chrgs-info": {
+        "tableName": "dy_pg_chrgs_info"
+      },
+      "pg-events-info": {
+        "tableName": "dy_pg_events_info"
+      },
+      "pg-guest-history": {
+        "tableName": "dy_pg_guest_history"
+      },
+      "pg-guest-info": {
+        "tableName": "dy_pg_guest_info"
+      },
+      "pg-info": {
+        "tableName": "dy_pg_info"
+      },
+      "pg-requests":{
+        "tableName":"dy_pg_requests"
+
+      },
+      "pg-kyc-info": {
+        "tableName": "dy_pg_kyc_info"
+      },
+      "pg-room-info": {
+        "tableName": "dy_pg_room_info"
+      },
+      "pg-srv-reqs": {
+        "tableName": "dy_pg_srv_reqs"
+      },
+      "pg-survey-results": {
+        "tableName": "dy_pg_survey_results"
+      },
+      "user-info": {
+        "tableName": "dy_user"
+      },
+      "user-profile": {
+        "tableName": "dy_user_profile"
+      },
+      "user-roles": {
+        "tableName": "dy_user_roles"
+      },
+      "pg-usr-map": {
+        "tableName": "dy_pg_usr_map"
+      },
+      "pg-alert-priority": {
+        "tableName": "st_pg_alert_priority"
+      },
+      "pg-alrt-cat": {
+        "tableName": "st_pg_alrt_cat"
+      },
+      "pg-amns": {
+        "tableName": "st_pg_amns"
+      },
+      "pg-avblty": {
+        "tableName": "st_pg_avblty"
+      },
+      "pg-baths": {
+        "tableName": "st_pg_baths"
+      },
+      "pg-cat": {
+        "tableName": "st_pg_cat"
+      },
+      "pg-chrgs": {
+        "tableName": "st_pg_chrgs"
+      },
+      "pg-ctys": {
+        "tableName": "st_pg_ctys"
+      },
+      "pg-cur-sts": {
+        "tableName": "st_pg_cur_sts"
+      },
+      "pg-description": {
+        "tableName": "st_pg_description"
+      },
+      "pg-experience-score": {
+        "tableName": "st_pg_experience_score"
+      },
+      "pg-floors": {
+        "tableName": "st_pg_floors"
+      },
+      "pg-gender": {
+        "tableName": "st_pg_gen"
+      },
+      "pg-gst-typ": {
+        "tableName": "st_pg_gst_typ"
+      },
+      "pg-kyc-type": {
+        "tableName": "st_pg_kyc_type"
+      },
+      "pg-pay-mode": {
+        "tableName": "st_pg_pay_mode"
+      },
+      "pg-perms": {
+        "tableName": "st_pg_perms"
+      },
+      "pg-prkng-type": {
+        "tableName": "st_pg_prkng_type"
+      },
+      "pg-roles": {
+        "tableName": "st_pg_role"
+      },
+      "pg-room-type": {
+        "tableName": "st_pg_room_type"
+      },
+      "pg-srv-cat": {
+        "tableName": "st_pg_srv_cat"
+      },
+      "pg-state": {
+        "tableName": "st_pg_state"
+      },
+      "pg-survey-items": {
+        "tableName": "st_pg_survey_items"
+      },
+      "pg-survey-section": {
+        "tableName": "st_pg_survey_section"
+      },
+      "pg-type": {
+        "tableName": "st_pg_type"
+      }
+
+
+  }
+
+}

@@ -1,0 +1,675 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/pg"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model dy_invoices {
+  id               Int                @id @default(autoincrement())
+  inv_id           String             @unique(map: "Inv_Id") @db.VarChar(20)
+  booking_id       Int
+  inv_amount       Decimal            @db.Decimal(10, 2)
+  inv_cgst         Decimal            @db.Decimal(10, 2)
+  inv_sgst         Decimal            @db.Decimal(10, 2)
+  inv_total        Decimal            @db.Decimal(10, 2)
+  inv_datetime     DateTime           @db.DateTime(0)
+  inv_duedate      DateTime           @db.DateTime(0)
+  inv_from_date    DateTime           @db.DateTime(0)
+  inv_to_date      DateTime           @db.DateTime(0)
+  inv_generated_by Int
+  dy_pg_bookings   dy_pg_bookings     @relation(fields: [booking_id], references: [id], onDelete: Cascade, map: "dy_invoice-fk_booking_id")
+  dy_user          dy_user            @relation(fields: [inv_generated_by], references: [id], onDelete: Cascade, map: "dy_invoice-fk_user_id")
+  dy_payments_info dy_payments_info[]
+
+  @@index([booking_id], map: "dy_invoice-fk_booking_ID_idx")
+  @@index([inv_generated_by], map: "dy_invoice-fk_user_id_idx")
+  @@index([booking_id], map: "fk_booking_id_idx")
+}
+
+model dy_payments_info {
+  id                         Int            @id @default(autoincrement())
+  payment_id                 String         @unique(map: "Payment_Id") @db.VarChar(35)
+  inv_id                     Int
+  payment_mode_id            Int
+  razor_pay_order_id         String?        @db.VarChar(50)
+  razor_pay_payment_datetime DateTime?      @db.DateTime(0)
+  payment_status             Int?
+  cash_payment               Decimal?       @db.Decimal(10, 2)
+  actual_payment             Decimal?       @db.Decimal(10, 2)
+  balance                    Decimal?       @db.Decimal(10, 2)
+  payment_date               DateTime?      @db.DateTime(0)
+  remarks                    String?        @db.VarChar(100)
+  st_pg_pay_mode             st_pg_pay_mode @relation(fields: [payment_mode_id], references: [id], onDelete: Cascade, map: "dy_payment_info_fk_payment_mode")
+  dy_invoices                dy_invoices    @relation(fields: [inv_id], references: [id], onDelete: Cascade, map: "dy_payments_info-fk_inv_id")
+  st_pg_cur_sts              st_pg_cur_sts? @relation(fields: [payment_status], references: [id], onDelete: Cascade, map: "dy_payments_info_fk_pay_status")
+  dy_receipts                dy_receipts[]
+
+  @@index([payment_mode_id], map: "dy_payment_info_fk_payment_mode_idx")
+  @@index([inv_id], map: "dy_payments_info-fk_inv_id")
+  @@index([payment_status], map: "dy_payments_info_fk_pay_status_idx")
+}
+
+model dy_pg_alerts {
+  id                   Int                  @id @default(autoincrement())
+  alert_cat            Int
+  alert_receiver_role  Int
+  alert_receiver       Int?
+  alert_title          String               @db.VarChar(45)
+  alert_description    String?              @db.VarChar(150)
+  alert_priority       Int
+  pg_id                Int
+  alert_status         Int
+  st_pg_alrt_cat       st_pg_alrt_cat       @relation(fields: [alert_cat], references: [id], onDelete: Cascade, map: "fk_alert_new_category")
+  dy_pg_info           dy_pg_info           @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_alert_new_pg")
+  st_pg_alert_priority st_pg_alert_priority @relation(fields: [alert_priority], references: [id], onDelete: Cascade, map: "fk_alert_new_priority")
+  dy_user              dy_user?             @relation(fields: [alert_receiver], references: [id], onDelete: Cascade, map: "fk_alert_new_receiver")
+  st_pg_role           st_pg_role           @relation(fields: [alert_receiver_role], references: [id], onDelete: Cascade, map: "fk_alert_new_role")
+  st_pg_cur_sts        st_pg_cur_sts        @relation(fields: [alert_status], references: [id], onDelete: Cascade, map: "fk_alert_new_status")
+
+  @@index([alert_cat], map: "fk_alert_new_category_idx")
+  @@index([pg_id], map: "fk_alert_new_pg_idx")
+  @@index([alert_priority], map: "fk_alert_new_priority_idx")
+  @@index([alert_receiver], map: "fk_alert_new_receiver_idx")
+  @@index([alert_receiver_role], map: "fk_alert_new_role_idx")
+  @@index([alert_status], map: "fk_alert_new_status_idx")
+}
+
+model dy_pg_amns_map {
+  id         Int         @id @default(autoincrement())
+  pg_info    Int?
+  amns_info  Int?
+  st_pg_amns st_pg_amns? @relation(fields: [amns_info], references: [id], onDelete: Cascade, map: "fk_pg_amns_id_data")
+  dy_pg_info dy_pg_info? @relation(fields: [pg_info], references: [id], onDelete: Cascade, map: "fk_pg_info_id_data")
+
+  @@index([amns_info], map: "fk_pg_amns_id_data_idx")
+  @@index([pg_info], map: "fk_pg_info_id_data_idx")
+}
+
+model dy_pg_bed_info {
+  id              Int              @id @default(autoincrement())
+  room_info       Int?
+  bed_number      Int?
+  bed_status      Int?
+  st_pg_cur_sts   st_pg_cur_sts?   @relation(fields: [bed_status], references: [id], onDelete: Cascade, map: "fk_bed_status_id")
+  dy_pg_room_info dy_pg_room_info? @relation(fields: [room_info], references: [id], onDelete: Cascade, map: "fk_room_info")
+  dy_pg_bookings  dy_pg_bookings[]
+
+  @@index([bed_status], map: "fk_bed_status_id_idx")
+  @@index([room_info], map: "fk_room_info_idx")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model dy_pg_bookings {
+  id                                          Int               @id @unique(map: "id_UNIQUE") @default(autoincrement())
+  bkg_no                                      String?           @db.VarChar(25)
+  pg_id                                       Int?
+  room_id                                     Int?
+  bed_id                                      Int?
+  bkg_date                                    DateTime?         @db.DateTime(0)
+  planned_check_in_date                       DateTime?         @db.DateTime(0)
+  actual_check_in_date                        DateTime?         @db.DateTime(0)
+  planned_check_out_date                      DateTime?         @db.DateTime(0)
+  actual_check_out_date                       DateTime?         @db.DateTime(0)
+  bkg_status                                  Int?
+  create_time                                 DateTime?         @db.DateTime(0)
+  modified_time                               DateTime?         @db.DateTime(0)
+  created_by                                  Int?
+  modified_by                                 Int?
+  remarks                                     String?           @db.Text
+  monthly_rent                                Decimal?          @db.Decimal(10, 2)
+  secuirty_deposit                            Decimal?          @db.Decimal(10, 2)
+  ac_charge                                   Decimal?          @db.Decimal(10, 2)
+  dth_charge                                  Decimal?          @db.Decimal(10, 2)
+  oven_charge                                 Decimal?          @db.Decimal(10, 2)
+  water_charge                                Decimal?          @db.Decimal(10, 2)
+  laundry_charge                              Decimal?          @db.Decimal(10, 2)
+  parking_charge                              Decimal?          @db.Decimal(10, 2)
+  refrigerator_charge                         Decimal?          @db.Decimal(10, 2)
+  electricity_fixed_charge                    Decimal?          @db.Decimal(10, 2)
+  electricity_meter_charge                    Decimal?          @db.Decimal(10, 2)
+  notice_period_time                          Int?
+  guest_id                                    Int?
+  dy_invoices                                 dy_invoices[]
+  dy_pg_bed_info                              dy_pg_bed_info?   @relation(fields: [bed_id], references: [id], onDelete: Cascade, map: "fk_bed_id_data")
+  st_pg_cur_sts                               st_pg_cur_sts?    @relation(fields: [bkg_status], references: [id], onDelete: Cascade, map: "fk_bkg_sts_id")
+  dy_pg_guest_info                            dy_pg_guest_info? @relation(fields: [guest_id], references: [id], onDelete: Cascade, map: "fk_guest_data")
+  dy_pg_info                                  dy_pg_info?       @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_pg_id_data")
+  dy_pg_room_info                             dy_pg_room_info?  @relation(fields: [room_id], references: [id], onDelete: Cascade, map: "fk_room_id_data")
+  dy_user_dy_pg_bookings_created_byTody_user  dy_user?          @relation("dy_pg_bookings_created_byTody_user", fields: [created_by], references: [id], onDelete: Cascade, map: "fk_user_created_data")
+  dy_user_dy_pg_bookings_modified_byTody_user dy_user?          @relation("dy_pg_bookings_modified_byTody_user", fields: [modified_by], references: [id], onDelete: Cascade, map: "fk_user_modified_data")
+
+  @@index([bed_id], map: "fk_bed_id_data_idx")
+  @@index([bkg_status], map: "fk_bkg_sts_id_idx")
+  @@index([guest_id], map: "fk_guest_data")
+  @@index([pg_id], map: "fk_pg_id_data_idx")
+  @@index([room_id], map: "fk_room_id_data_idx")
+  @@index([created_by], map: "fk_user_created_data_idx")
+  @@index([modified_by], map: "fk_user_modified_data_idx")
+}
+
+model dy_pg_chrgs_info {
+  id          Int          @id @default(autoincrement())
+  pg_id       Int?
+  charge_type Int?
+  charge_cost Float?
+  st_pg_chrgs st_pg_chrgs? @relation(fields: [charge_type], references: [id], onDelete: Cascade, map: "fk_pg_chrg_type_idx")
+  dy_pg_info  dy_pg_info?  @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_pg_data_idx")
+
+  @@index([charge_type], map: "fk_pg_chrg_type_idx_idx")
+  @@index([pg_id], map: "fk_pg_data_idx_idx")
+}
+
+model dy_pg_events_info {
+  id                Int         @id @default(autoincrement())
+  event_date        DateTime?   @db.DateTime(0)
+  event_title       String?     @db.VarChar(45)
+  event_description String?     @db.VarChar(150)
+  pg_id             Int?
+  dy_pg_info        dy_pg_info? @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_pg_id_ev")
+
+  @@index([pg_id], map: "fk_pg_id_ev_idx")
+}
+
+model dy_pg_guest_history {
+  id             Int         @id @default(autoincrement())
+  guest_info     Int?
+  pg_info        Int?
+  check_in_time  DateTime?   @db.DateTime(0)
+  check_out_time DateTime?   @db.DateTime(0)
+  dy_pg_info     dy_pg_info? @relation(fields: [pg_info], references: [id], onDelete: Cascade, map: "fk_pg_info_data")
+
+  @@index([pg_info], map: "fk_pg_info_data_idx")
+}
+
+model dy_pg_guest_info {
+  id                     Int                    @id @default(autoincrement())
+  guest_type             Int?
+  guest_status           Int?
+  perm_address           String?                @db.VarChar(45)
+  pg_id                  Int?
+  user_id                Int?
+  emergency_contact      String?                @map("emergency-contact") @db.VarChar(45)
+  emergency_contact_name String?                @db.VarChar(45)
+  dy_pg_bookings         dy_pg_bookings[]
+  st_pg_cur_sts          st_pg_cur_sts?         @relation(fields: [guest_status], references: [id], onDelete: Cascade, map: "fk_guest_status")
+  st_pg_gst_typ          st_pg_gst_typ?         @relation(fields: [guest_type], references: [id], onDelete: Cascade, map: "fk_new_guest_type")
+  dy_pg_info             dy_pg_info?            @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_pg_id")
+  dy_user                dy_user?               @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_user_id")
+  dy_pg_survey_results   dy_pg_survey_results[]
+
+  @@index([guest_status], map: "fk_guest_status_idx")
+  @@index([guest_type], map: "fk_new_guest_type_idx")
+  @@index([pg_id], map: "fk_pg_id_idx")
+  @@index([user_id], map: "fk_user_id_idx")
+}
+
+model dy_pg_info {
+  id                      Int                   @id @default(autoincrement())
+  pg_id                   String?               @db.VarChar(45)
+  pg_name                 String?               @db.VarChar(45)
+  pg_owner                Int?
+  pg_cat                  Int?
+  pg_type_id              Int?
+  pg_desc_id              Int?
+  pg_address              String?               @db.VarChar(150)
+  pg_city                 Int?
+  pg_state                Int?
+  pg_landmark             String?               @db.VarChar(45)
+  pg_pincode              Int?
+  pg_major_area           String?               @db.VarChar(45)
+  pg_primary_contact_no   String?               @db.VarChar(15)
+  pg_alternate_contact_no String?               @db.VarChar(15)
+  pg_email                String?               @db.VarChar(45)
+  pg_map_url              String?               @db.VarChar(150)
+  pg_create_time          DateTime?             @db.DateTime(0)
+  pg_update_time          DateTime?             @db.DateTime(0)
+  pg_documents_path       String?               @db.VarChar(250)
+  pg_status               Int?
+  dy_pg_alerts            dy_pg_alerts[]
+  dy_pg_amns_map          dy_pg_amns_map[]
+  dy_pg_bookings          dy_pg_bookings[]
+  dy_pg_chrgs_info        dy_pg_chrgs_info[]
+  dy_pg_events_info       dy_pg_events_info[]
+  dy_pg_guest_history     dy_pg_guest_history[]
+  dy_pg_guest_info        dy_pg_guest_info[]
+  st_pg_cat               st_pg_cat?            @relation(fields: [pg_cat], references: [id], onDelete: Cascade, map: "fk_pg_category")
+  st_pg_ctys              st_pg_ctys?           @relation(fields: [pg_city], references: [id], onDelete: Cascade, map: "fk_pg_city")
+  st_pg_description       st_pg_description?    @relation(fields: [pg_desc_id], references: [id], onDelete: Cascade, map: "fk_pg_description")
+  st_pg_cur_sts           st_pg_cur_sts?        @relation(fields: [pg_status], references: [id], onDelete: Cascade, map: "fk_pg_new_status")
+  dy_user                 dy_user?              @relation(fields: [pg_owner], references: [id], onDelete: Cascade, map: "fk_pg_owner")
+  st_pg_state             st_pg_state?          @relation(fields: [pg_state], references: [id], onDelete: Cascade, map: "fk_pg_state")
+  st_pg_type              st_pg_type?           @relation(fields: [pg_type_id], references: [id], onDelete: Cascade, map: "fk_pg_type")
+  dy_pg_kyc_info          dy_pg_kyc_info[]
+  dy_pg_requests          dy_pg_requests[]
+  dy_pg_room_info         dy_pg_room_info[]
+  dy_pg_srv_reqs          dy_pg_srv_reqs[]
+  dy_pg_usr_map           dy_pg_usr_map[]
+
+  @@index([pg_cat], map: "fk_pg_category_idx")
+  @@index([pg_city], map: "fk_pg_city_idx")
+  @@index([pg_desc_id], map: "fk_pg_description_idx")
+  @@index([pg_status], map: "fk_pg_new_status_idx")
+  @@index([pg_owner], map: "fk_pg_owner_idx")
+  @@index([pg_state], map: "fk_pg_state_idx")
+  @@index([pg_type_id], map: "fk_pg_type_idx")
+}
+
+model dy_pg_kyc_info {
+  id                       Int             @id @default(autoincrement())
+  guest_info               Int?
+  pg_info                  Int?
+  kyc_type                 Int?
+  kyc_number               String?         @db.VarChar(45)
+  kyc_document_path        String?         @db.VarChar(45)
+  kyc_document_expiry_time DateTime?       @db.DateTime(0)
+  dy_user                  dy_user?        @relation(fields: [guest_info], references: [id], onDelete: Cascade, map: "fk_kyc_guest")
+  dy_pg_info               dy_pg_info?     @relation(fields: [pg_info], references: [id], onDelete: Cascade, map: "fk_kyc_pg")
+  st_pg_kyc_type           st_pg_kyc_type? @relation(fields: [kyc_type], references: [id], onDelete: Cascade, map: "fk_kyc_type")
+
+  @@index([guest_info], map: "fk_kyc_guest_idx")
+  @@index([pg_info], map: "fk_kyc_pg_idx")
+  @@index([kyc_type], map: "fk_kyc_type_idx")
+}
+
+model dy_pg_requests {
+  id            Int            @id @default(autoincrement())
+  pg_info       Int?
+  user_info     Int?
+  pg_status     Int?
+  dy_pg_info    dy_pg_info?    @relation(fields: [pg_info], references: [id], onDelete: Cascade, map: "fk_pg_req_new_pg")
+  st_pg_cur_sts st_pg_cur_sts? @relation(fields: [pg_status], references: [id], onDelete: Cascade, map: "fk_pg_req_new_status")
+  dy_user       dy_user?       @relation(fields: [user_info], references: [id], onDelete: Cascade, map: "fk_pg_req_new_user")
+
+  @@index([pg_info], map: "fk_pg_req_new_pg_idx")
+  @@index([pg_status], map: "fk_pg_req_new_status_idx")
+  @@index([user_info], map: "fk_pg_req_new_user_idx")
+}
+
+model dy_pg_room_info {
+  id                Int              @id @default(autoincrement())
+  room_name         String?          @db.VarChar(20)
+  pg_info           Int?
+  room_type         Int?
+  bathroom_type     Int?
+  floor_info        Int?
+  has_tv            Int?             @db.TinyInt
+  has_ac            Int?             @db.TinyInt
+  has_balcony       Int?             @db.TinyInt
+  room_create_time  DateTime?        @db.DateTime(0)
+  room_updated_time DateTime?        @db.DateTime(0)
+  dy_pg_bed_info    dy_pg_bed_info[]
+  dy_pg_bookings    dy_pg_bookings[]
+  st_pg_baths       st_pg_baths?     @relation(fields: [bathroom_type], references: [id], onDelete: Cascade, map: "fk_bathroom_type_id")
+  st_pg_floors      st_pg_floors?    @relation(fields: [floor_info], references: [id], onDelete: Cascade, map: "fk_floor_info_id")
+  dy_pg_info        dy_pg_info?      @relation(fields: [pg_info], references: [id], onDelete: Cascade, map: "fk_pg_info_id")
+  st_pg_room_type   st_pg_room_type? @relation(fields: [room_type], references: [id], onDelete: Cascade, map: "fk_room_type_id")
+
+  @@index([bathroom_type], map: "fk_bathroom_type_id_idx")
+  @@index([floor_info], map: "fk_floor_info_id_idx")
+  @@index([pg_info], map: "fk_pg_info_id_idx")
+  @@index([room_type], map: "fk_room_type_id_idx")
+}
+
+model dy_pg_srv_reqs {
+  id                                                  Int                     @id @default(autoincrement())
+  requestor_info                                      Int?
+  request_assigned_to                                 Int?
+  service_title                                       String?                 @db.VarChar(45)
+  service_description                                 String?                 @db.VarChar(150)
+  request_create_date                                 DateTime?               @db.DateTime(0)
+  request_eta_date                                    DateTime?               @db.DateTime(0)
+  SLA                                                 Int?
+  feedback                                            Int?
+  service_category                                    Int?
+  service_status                                      Int?
+  pg_id                                               Int?
+  feedback_summary                                    String?                 @db.VarChar(200)
+  dy_user_dy_pg_srv_reqs_request_assigned_toTody_user dy_user?                @relation("dy_pg_srv_reqs_request_assigned_toTody_user", fields: [request_assigned_to], references: [id], onDelete: Cascade, map: "fk_srv_new_assignee")
+  st_pg_srv_cat                                       st_pg_srv_cat?          @relation(fields: [service_category], references: [id], onDelete: Cascade, map: "fk_srv_new_category")
+  st_pg_experience_score                              st_pg_experience_score? @relation(fields: [feedback], references: [id], onDelete: Cascade, map: "fk_srv_new_feedback")
+  dy_pg_info                                          dy_pg_info?             @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_srv_new_pg")
+  dy_user_dy_pg_srv_reqs_requestor_infoTody_user      dy_user?                @relation("dy_pg_srv_reqs_requestor_infoTody_user", fields: [requestor_info], references: [id], onDelete: Cascade, map: "fk_srv_new_requestor")
+  st_pg_cur_sts                                       st_pg_cur_sts?          @relation(fields: [service_status], references: [id], onDelete: Cascade, map: "fk_srv_new_status")
+
+  @@index([request_assigned_to], map: "fk_srv_new_assignee_idx")
+  @@index([service_category], map: "fk_srv_new_category_idx")
+  @@index([feedback], map: "fk_srv_new_feedback_idx")
+  @@index([pg_id], map: "fk_srv_new_pg_idx")
+  @@index([requestor_info], map: "fk_srv_new_requestor_idx")
+  @@index([service_status], map: "fk_srv_new_status_idx")
+}
+
+model dy_pg_survey_results {
+  id                     Int                     @id @default(autoincrement())
+  guest_id               Int?
+  survey_item_id         Int?
+  experience_score       Int?
+  feedback_summary       String?                 @db.VarChar(200)
+  survey_date            DateTime?               @db.DateTime(0)
+  dy_pg_guest_info       dy_pg_guest_info?       @relation(fields: [guest_id], references: [id], onDelete: Cascade, map: "fk_pg_survey_new_guest")
+  st_pg_survey_items     st_pg_survey_items?     @relation(fields: [survey_item_id], references: [id], onDelete: Cascade, map: "fk_pg_survey_new_item")
+  st_pg_experience_score st_pg_experience_score? @relation(fields: [experience_score], references: [id], onDelete: Cascade, map: "fk_pg_survey_new_score")
+
+  @@index([guest_id], map: "fk_pg_survey_new_guest")
+  @@index([survey_item_id], map: "fk_pg_survey_new_item_idx")
+  @@index([experience_score], map: "fk_pg_survey_new_score_idx")
+}
+
+model dy_pg_usr_map {
+  id         Int         @id @default(autoincrement())
+  user_id    Int?
+  pg_id      Int?
+  dy_pg_info dy_pg_info? @relation(fields: [pg_id], references: [id], onDelete: Cascade, map: "fk_pg_map_new_pg")
+  dy_user    dy_user?    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_pg_map_new_user")
+
+  @@index([pg_id], map: "fk_pg_map_new_pg_idx")
+  @@index([user_id], map: "fk_pg_map_new_user_idx")
+}
+
+model dy_receipts {
+  id               Int              @id @default(autoincrement())
+  receipt_id       String           @unique(map: "receipt_id") @db.VarChar(20)
+  payment_id       Int
+  payment_datetime DateTime?        @db.DateTime(0)
+  dy_payments_info dy_payments_info @relation(fields: [payment_id], references: [id], onDelete: Cascade, map: "dy_receipt-fk_payment_id")
+
+  @@index([payment_id], map: "payment_id_fk_idx")
+}
+
+model dy_user {
+  id                                                         Int                @id @default(autoincrement())
+  univ_user_id                                               String?            @unique(map: "univ_user_id_UNIQUE") @db.VarChar(70)
+  first_name                                                 String?            @db.VarChar(45)
+  last_name                                                  String?            @db.VarChar(45)
+  email_id                                                   String?            @db.VarChar(45)
+  mobile_no                                                  String?            @db.VarChar(15)
+  ref_code                                                   String?            @db.VarChar(10)
+  mobile_verified                                            Int?               @db.TinyInt
+  email_verified                                             Int?               @db.TinyInt
+  passwd                                                     String?            @db.VarChar(512)
+  signuptime                                                 DateTime?          @db.Timestamp(0)
+  gender_id                                                  Int?
+  last_updated                                               DateTime?          @db.Timestamp(0)
+  customer_id                                                String?            @db.VarChar(45)
+  is_active                                                  Int?               @db.TinyInt
+  rstatus                                                    Int?               @db.TinyInt
+  project_category                                           Int?
+  dy_invoices                                                dy_invoices[]
+  dy_pg_alerts                                               dy_pg_alerts[]
+  dy_pg_bookings_dy_pg_bookings_created_byTody_user          dy_pg_bookings[]   @relation("dy_pg_bookings_created_byTody_user")
+  dy_pg_bookings_dy_pg_bookings_modified_byTody_user         dy_pg_bookings[]   @relation("dy_pg_bookings_modified_byTody_user")
+  dy_pg_guest_info                                           dy_pg_guest_info[]
+  dy_pg_info                                                 dy_pg_info[]
+  dy_pg_kyc_info                                             dy_pg_kyc_info[]
+  dy_pg_requests                                             dy_pg_requests[]
+  dy_pg_srv_reqs_dy_pg_srv_reqs_request_assigned_toTody_user dy_pg_srv_reqs[]   @relation("dy_pg_srv_reqs_request_assigned_toTody_user")
+  dy_pg_srv_reqs_dy_pg_srv_reqs_requestor_infoTody_user      dy_pg_srv_reqs[]   @relation("dy_pg_srv_reqs_requestor_infoTody_user")
+  dy_pg_usr_map                                              dy_pg_usr_map[]
+  dy_user_profile                                            dy_user_profile[]
+  dy_user_roles                                              dy_user_roles[]
+
+  @@index([gender_id], map: "fk_gen_id_idx")
+}
+
+model dy_user_profile {
+  id                       Int       @id @default(autoincrement())
+  user_id                  Int?
+  current_city             String?   @db.VarChar(45)
+  conv_mode_id             Int?
+  alt_email_id             String?   @db.VarChar(45)
+  alt_mobile_no            String?   @db.VarChar(20)
+  allow_promotion_campaign Int?
+  Interests                String?   @db.TinyText
+  last_updated             DateTime? @db.DateTime(0)
+  is_active                Int?      @db.TinyInt
+  dy_user                  dy_user?  @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "fk_profile_user")
+
+  @@index([user_id], map: "fk_profile_user_idx")
+}
+
+model dy_user_roles {
+  id         Int         @id @default(autoincrement())
+  user_id    Int?
+  role_id    Int?
+  is_active  Int?        @db.TinyInt
+  dy_user    dy_user?    @relation(fields: [user_id], references: [id], onDelete: Cascade, map: "dy_user_roles_ibfk_1")
+  st_pg_role st_pg_role? @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "st_roles_ib")
+
+  @@index([user_id], map: "dy_user_roles_ibfk_1_idx")
+  @@index([role_id], map: "st_roles_ib_idx")
+}
+
+model st_pg_alert_priority {
+  id            Int            @id @default(autoincrement())
+  priority      String?        @db.VarChar(45)
+  priority_desc String?        @db.VarChar(45)
+  dy_pg_alerts  dy_pg_alerts[]
+}
+
+model st_pg_alrt_cat {
+  id             Int            @id @default(autoincrement())
+  alert_category String?        @db.VarChar(45)
+  dy_pg_alerts   dy_pg_alerts[]
+}
+
+model st_pg_amns {
+  id             Int              @id @default(autoincrement())
+  amenity_name   String?          @db.VarChar(75)
+  rstatus        Int?             @db.TinyInt
+  dy_pg_amns_map dy_pg_amns_map[]
+}
+
+model st_pg_avblty {
+  id           Int     @id @default(autoincrement())
+  availability String? @db.VarChar(45)
+}
+
+model st_pg_baths {
+  id              Int               @id @default(autoincrement())
+  nbaths          String?           @db.VarChar(45)
+  rstatus         Int?              @db.TinyInt
+  dy_pg_room_info dy_pg_room_info[]
+}
+
+model st_pg_cat {
+  id         Int          @id @default(autoincrement())
+  category   String?      @db.VarChar(45)
+  dy_pg_info dy_pg_info[]
+}
+
+model st_pg_chrgs {
+  id               Int                @id @default(autoincrement())
+  charge           String?            @db.VarChar(45)
+  chargegroup      String?            @db.VarChar(45)
+  cost             String?            @db.VarChar(45)
+  dy_pg_chrgs_info dy_pg_chrgs_info[]
+}
+
+model st_pg_ctys {
+  id         Int          @id @default(autoincrement())
+  city       String?      @db.VarChar(45)
+  state_id   Int?
+  rstatus    Int?         @db.TinyInt
+  dy_pg_info dy_pg_info[]
+}
+
+model st_pg_cur_sts {
+  id                     Int                      @id @default(autoincrement())
+  status_code            String?                  @db.VarChar(60)
+  rstatus                Int?
+  dy_payments_info       dy_payments_info[]
+  dy_pg_alerts           dy_pg_alerts[]
+  dy_pg_bed_info         dy_pg_bed_info[]
+  dy_pg_bookings         dy_pg_bookings[]
+  dy_pg_guest_info       dy_pg_guest_info[]
+  dy_pg_info             dy_pg_info[]
+  dy_pg_rbac_permissions dy_pg_rbac_permissions[]
+  dy_pg_requests         dy_pg_requests[]
+  dy_pg_srv_reqs         dy_pg_srv_reqs[]
+}
+
+model st_pg_description {
+  id         Int          @id @default(autoincrement())
+  pg_desc    String?      @db.VarChar(30)
+  rstatus    Int?         @db.TinyInt
+  dy_pg_info dy_pg_info[]
+}
+
+model st_pg_experience_score {
+  id                   Int                    @id @default(autoincrement())
+  experience           String?                @db.VarChar(20)
+  score                Int?
+  dy_pg_srv_reqs       dy_pg_srv_reqs[]
+  dy_pg_survey_results dy_pg_survey_results[]
+}
+
+model st_pg_floors {
+  id              Int               @id @default(autoincrement())
+  floor           Int?
+  rstatus         Int?              @db.TinyInt
+  dy_pg_room_info dy_pg_room_info[]
+}
+
+model st_pg_gen {
+  id          Int     @id @default(autoincrement())
+  gender_type String? @db.VarChar(20)
+}
+
+model st_pg_gst_typ {
+  id               Int                @id @default(autoincrement())
+  guest_type       String?            @db.VarChar(45)
+  dy_pg_guest_info dy_pg_guest_info[]
+}
+
+model st_pg_kyc_type {
+  id             Int              @id @default(autoincrement())
+  proof_type     String?          @db.VarChar(45)
+  rstatus        Int?
+  dy_pg_kyc_info dy_pg_kyc_info[]
+}
+
+model st_pg_pay_mode {
+  id               Int                @id @default(autoincrement())
+  pay_mode         String?            @db.VarChar(45)
+  dy_payments_info dy_payments_info[]
+}
+
+model st_pg_perms {
+  id         Int     @id @default(autoincrement())
+  permission String? @db.VarChar(45)
+  rstatus    Int?
+}
+
+model st_pg_prkng_type {
+  id           Int     @id @default(autoincrement())
+  parking_type String? @db.VarChar(15)
+  rstatus      Int?    @db.TinyInt
+}
+
+model st_pg_role {
+  id                     Int                      @id @default(autoincrement())
+  role                   String?                  @db.VarChar(45)
+  dy_pg_alerts           dy_pg_alerts[]
+  dy_pg_rbac_permissions dy_pg_rbac_permissions[]
+  dy_user_roles          dy_user_roles[]
+  st_pg_role_permissions st_pg_role_permissions[]
+}
+
+model st_pg_room_type {
+  id              Int               @id @default(autoincrement())
+  nbeds           Int?
+  occupancy       String?           @db.VarChar(45)
+  rstatus         Int?              @db.TinyInt
+  dy_pg_room_info dy_pg_room_info[]
+}
+
+model st_pg_srv_cat {
+  id               Int              @id @default(autoincrement())
+  service_category String?          @db.VarChar(45)
+  resolve_timeline Int?
+  dy_pg_srv_reqs   dy_pg_srv_reqs[]
+}
+
+model st_pg_state {
+  id         Int          @id @default(autoincrement())
+  scode      String?      @db.VarChar(5)
+  name       String?      @db.VarChar(45)
+  rstatus    Int?         @db.TinyInt
+  dy_pg_info dy_pg_info[]
+}
+
+model st_pg_survey_items {
+  id                   Int                    @id @default(autoincrement())
+  survey_section_id    Int?
+  survey_item          String?                @db.VarChar(100)
+  dy_pg_survey_results dy_pg_survey_results[]
+}
+
+model st_pg_survey_section {
+  id      Int     @id @default(autoincrement())
+  section String? @db.VarChar(45)
+}
+
+model st_pg_type {
+  id         Int          @id @default(autoincrement())
+  pg_type    String?      @db.VarChar(20)
+  rstatus    Int?         @db.TinyInt
+  dy_pg_info dy_pg_info[]
+}
+
+model dy_pg_rbac_permissions {
+  id               Int               @id @default(autoincrement())
+  role_id          Int?
+  operation_id     Int?
+  component_id     Int?
+  description      String?           @db.VarChar(150)
+  status           Int?
+  st_pg_components st_pg_components? @relation(fields: [component_id], references: [id], onDelete: Cascade, map: "fk_component_id_data")
+  st_pg_operations st_pg_operations? @relation(fields: [operation_id], references: [id], onDelete: Cascade, map: "fk_operation_id_data")
+  st_pg_role       st_pg_role?       @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_role_id_data")
+  st_pg_cur_sts    st_pg_cur_sts?    @relation(fields: [status], references: [id], onDelete: Cascade, map: "fk_status_id")
+
+  @@index([component_id], map: "fk_component_id_data_idx")
+  @@index([operation_id], map: "fk_operation_id_data_idx")
+  @@index([role_id], map: "fk_role_id_data_idx")
+  @@index([status], map: "fk_status_id_idx")
+}
+
+model st_pg_components {
+  id                     Int                      @id @default(autoincrement())
+  component              String?                  @db.VarChar(45)
+  active                 String?                  @db.VarChar(45)
+  dy_pg_rbac_permissions dy_pg_rbac_permissions[]
+}
+
+model st_pg_operations {
+  id                     Int                      @id @default(autoincrement())
+  operation              String?                  @db.VarChar(45)
+  active                 Int?                     @default(0)
+  dy_pg_rbac_permissions dy_pg_rbac_permissions[]
+}
+
+model st_pg_permission {
+  id                     Int                      @id @default(autoincrement())
+  permission_key         String?                  @db.VarChar(45)
+  display_name           String?                  @db.VarChar(45)
+  is_active              Int?
+  rstatus                Int?
+  st_pg_role_permissions st_pg_role_permissions[]
+}
+
+model st_pg_role_permissions {
+  id               Int               @id @default(autoincrement())
+  role_id          Int?
+  permission_id    Int?
+  is_active        Int?
+  st_pg_permission st_pg_permission? @relation(fields: [permission_id], references: [id], onDelete: Cascade, map: "fk_permis")
+  st_pg_role       st_pg_role?       @relation(fields: [role_id], references: [id], onDelete: Cascade, map: "fk_role")
+
+  @@index([permission_id], map: "fk_permis_idx")
+  @@index([role_id], map: "fk_role_idx")
+}
