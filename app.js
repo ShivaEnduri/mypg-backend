@@ -97,28 +97,22 @@ const app =
 ============================================================ */
 
 const allowedOrigins = [
+  // You can keep specific domains here if you want
   // "http://localhost:5173",
   // "https://my-2k1f2ldzz-shiva-enduris-projects.vercel.app",
-  "*.*"
 ];
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      // Allow Postman/server-to-server requests
+      // Allow requests without an Origin header
+      // (Postman, server-to-server, mobile apps, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      console.log("CORS blocked origin:", origin);
-
-      return callback(
-        new Error(`CORS blocked for origin: ${origin}`)
-      );
+      // Allow ALL origins
+      return callback(null, true);
     },
 
     methods: [
@@ -139,6 +133,8 @@ app.use(
   })
 );
 
+// Handle preflight requests
+app.options("*", cors());
 /* ============================================================
    BODY
 ============================================================ */
