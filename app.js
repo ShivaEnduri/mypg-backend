@@ -98,7 +98,7 @@ const app =
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://my-pg-chi.vercel.app",
+  "https://my-pg-chi.vercel.app/",
 ];
 
 console.log("Allowed CORS origins:", allowedOrigins);
