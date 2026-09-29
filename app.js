@@ -98,7 +98,7 @@ const app =
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://my-2k1f2ldzz-shiva-enduris-projects.vercel.app",
+  "https://my-pg-chi.vercel.app",
 ];
 
 app.use(
