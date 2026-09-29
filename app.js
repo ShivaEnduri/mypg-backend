@@ -101,19 +101,23 @@ const allowedOrigins = [
   "https://my-pg-chi.vercel.app",
 ];
 
+console.log("Allowed CORS origins:", allowedOrigins);
+
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow Postman/server-to-server requests
+    origin: (origin, callback) => {
+      // Allow requests without an Origin header
+      // (Postman, server-to-server, etc.)
       if (!origin) {
         return callback(null, true);
       }
 
       if (allowedOrigins.includes(origin)) {
+        console.log("CORS allowed:", origin);
         return callback(null, true);
       }
 
-      console.log("CORS blocked origin:", origin);
+      console.error("CORS blocked:", origin);
 
       return callback(
         new Error(`CORS blocked for origin: ${origin}`)
