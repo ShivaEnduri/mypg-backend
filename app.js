@@ -97,27 +97,24 @@ const app =
 ============================================================ */
 
 const allowedOrigins = [
-  "http://localhost:5173",
-  "https://my-pg-chi.vercel.app/",
+  // "http://localhost:5173",
+  // "https://my-2k1f2ldzz-shiva-enduris-projects.vercel.app",
+  "*.*"
 ];
-
-console.log("Allowed CORS origins:", allowedOrigins);
 
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // Allow requests without an Origin header
-      // (Postman, server-to-server, etc.)
+    origin: function (origin, callback) {
+      // Allow Postman/server-to-server requests
       if (!origin) {
         return callback(null, true);
       }
 
       if (allowedOrigins.includes(origin)) {
-        console.log("CORS allowed:", origin);
         return callback(null, true);
       }
 
-      console.error("CORS blocked:", origin);
+      console.log("CORS blocked origin:", origin);
 
       return callback(
         new Error(`CORS blocked for origin: ${origin}`)
