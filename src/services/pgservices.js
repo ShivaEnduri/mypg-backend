@@ -226,15 +226,14 @@ const getDateTimeFields = (
 
    ============================================================ */
 
+
+
+
 const convertDateFields = (
   data,
   dateTimeFields,
   modelName
 ) => {
-
-  /* ==========================================================
-     NULL / UNDEFINED
-     ========================================================== */
 
   if (
     data === null ||
@@ -247,10 +246,8 @@ const convertDateFields = (
 
 
   /* ==========================================================
-     DATE OBJECT
-
-     NEVER RECURSE INTO Date
-     ========================================================== */
+     NEVER PROCESS DATE OBJECT
+  ========================================================== */
 
   if (
     data instanceof Date
@@ -262,12 +259,11 @@ const convertDateFields = (
 
 
   /* ==========================================================
-     ONLY PROCESS PLAIN OBJECT
-     ========================================================== */
+     ONLY PROCESS OBJECT
+  ========================================================== */
 
   if (
-    typeof data !==
-      "object" ||
+    typeof data !== "object" ||
     Array.isArray(data)
   ) {
 
@@ -276,25 +272,14 @@ const convertDateFields = (
   }
 
 
-  /* ==========================================================
-     COPY DATA
-
-     IMPORTANT:
-
-     We create a shallow copy only.
-
-     We DO NOT recursively process nested objects.
-     ========================================================== */
-
-  const result =
-    {
-      ...data
-    };
+  const result = {
+    ...data,
+  };
 
 
   /* ==========================================================
-     PROCESS ONLY PRISMA DATETIME FIELDS
-     ========================================================== */
+     PROCESS DATETIME FIELDS
+  ========================================================== */
 
   for (
     const field
@@ -302,10 +287,8 @@ const convertDateFields = (
   ) {
 
     /* ========================================================
-       FIELD NOT PROVIDED
-
-       Nothing to convert.
-       ======================================================== */
+       FIELD NOT PRESENT
+    ======================================================== */
 
     if (
       !Object.prototype.hasOwnProperty.call(
@@ -325,9 +308,7 @@ const convertDateFields = (
 
     /* ========================================================
        NULL
-
-       Keep NULL exactly as frontend sent it.
-       ======================================================== */
+    ======================================================== */
 
     if (
       value === null
@@ -337,8 +318,6 @@ const convertDateFields = (
         `Keeping NULL: ${modelName}.${field}`
       );
 
-      result[field] =
-        null;
 
       continue;
 
@@ -346,21 +325,17 @@ const convertDateFields = (
 
 
     /* ========================================================
-       ALREADY DATE OBJECT
-
-       Do nothing.
-       ======================================================== */
+       ALREADY DATE
+    ======================================================== */
 
     if (
       value instanceof Date
     ) {
 
       console.log(
-        `Keeping Date object: ${modelName}.${field}`
+        `Already Date object: ${modelName}.${field}`
       );
 
-      result[field] =
-        value;
 
       continue;
 
@@ -368,21 +343,25 @@ const convertDateFields = (
 
 
     /* ========================================================
-       STRING DATETIME
-       ======================================================== */
+       STRING
+    ======================================================== */
 
     if (
-      typeof value ===
-      "string"
+      typeof value === "string"
     ) {
+
+      if (
+        value.trim() === ""
+      ) {
+
+        continue;
+
+      }
+
 
       const parsedDate =
         new Date(value);
 
-
-      /* ======================================================
-         VALID DATE
-         ====================================================== */
 
       if (
         !Number.isNaN(
@@ -391,44 +370,37 @@ const convertDateFields = (
       ) {
 
         console.log(
-          `Keeping frontend datetime: ${modelName}.${field} = ${value}`
+          `Converted DateTime: ${modelName}.${field}`
         );
+
+        console.log(
+          "Original:",
+          value
+        );
+
+        console.log(
+          "Date object:",
+          parsedDate
+        );
+
 
         result[field] =
           parsedDate;
+
 
         continue;
 
       }
 
 
-      /* ======================================================
-         INVALID DATE
-
-         Leave the original value so Prisma
-         can report the actual validation error.
-         ====================================================== */
-
       console.warn(
         `Invalid datetime: ${modelName}.${field} = ${value}`
       );
 
-      result[field] =
-        value;
 
       continue;
 
     }
-
-
-    /* ========================================================
-       OTHER VALUE
-
-       Leave unchanged.
-       ======================================================== */
-
-    result[field] =
-      value;
 
   }
 
@@ -437,10 +409,12 @@ const convertDateFields = (
 
 };
 
-
 /* ============================================================
    CREATE
    ============================================================ */
+
+
+
 
 const create = async ({
   db,
@@ -451,15 +425,15 @@ const create = async ({
 
   /* ==========================================================
      GET DATABASE CLIENT
-     ========================================================== */
+  ========================================================== */
 
   const dbClient =
     getDB(db);
 
 
   /* ==========================================================
-     DEBUG ORIGINAL INPUT
-     ========================================================== */
+     DEBUG INPUT
+  ========================================================== */
 
   console.log(
     "========== CREATE INPUT =========="
@@ -497,11 +471,10 @@ const create = async ({
 
   /* ==========================================================
      KYC SPECIAL CASE
-     ========================================================== */
+  ========================================================== */
 
   if (
-    model ===
-    "dy_pg_kyc_info"
+    model === "dy_pg_kyc_info"
   ) {
 
     return await handleKycCreate({
@@ -520,7 +493,7 @@ const create = async ({
 
   /* ==========================================================
      PARSE DATA
-     ========================================================== */
+  ========================================================== */
 
   let parsedData =
     data;
@@ -528,11 +501,10 @@ const create = async ({
 
   /* ==========================================================
      STRING DATA
-     ========================================================== */
+  ========================================================== */
 
   if (
-    typeof parsedData ===
-    "string"
+    typeof parsedData === "string"
   ) {
 
     try {
@@ -556,8 +528,8 @@ const create = async ({
 
 
   /* ==========================================================
-     HANDLE NULL / UNDEFINED
-     ========================================================== */
+     NULL / UNDEFINED
+  ========================================================== */
 
   if (
     parsedData === null ||
@@ -572,17 +544,15 @@ const create = async ({
 
 
   /* ==========================================================
-     HANDLE PAYLOAD
-     ========================================================== */
+     PAYLOAD
+  ========================================================== */
 
   if (
-    parsedData?.payload !==
-    undefined
+    parsedData?.payload !== undefined
   ) {
 
     parsedData =
-      typeof parsedData.payload ===
-      "string"
+      typeof parsedData.payload === "string"
 
         ? JSON.parse(
             parsedData.payload
@@ -594,20 +564,17 @@ const create = async ({
 
 
   /* ==========================================================
-     HANDLE { data: {} }
-     ========================================================== */
+     { data: {} }
+  ========================================================== */
 
   if (
     parsedData &&
-    typeof parsedData ===
-      "object" &&
-    parsedData.data !==
-      undefined
+    typeof parsedData === "object" &&
+    parsedData.data !== undefined
   ) {
 
     parsedData =
-      typeof parsedData.data ===
-      "string"
+      typeof parsedData.data === "string"
 
         ? JSON.parse(
             parsedData.data
@@ -620,12 +587,11 @@ const create = async ({
 
   /* ==========================================================
      VALIDATION
-     ========================================================== */
+  ========================================================== */
 
   if (
     !parsedData ||
-    typeof parsedData !==
-      "object" ||
+    typeof parsedData !== "object" ||
     Array.isArray(parsedData)
   ) {
 
@@ -651,7 +617,7 @@ const create = async ({
 
   /* ==========================================================
      GET DATETIME FIELDS
-     ========================================================== */
+  ========================================================== */
 
   const dateTimeFields =
     getDateTimeFields(
@@ -661,12 +627,8 @@ const create = async ({
 
 
   /* ==========================================================
-     ADD DEFAULT DATETIME
-
-     IMPORTANT:
-
-     This happens only once before transaction.
-     ========================================================== */
+     ADD DEFAULT INDIAN DATETIME
+  ========================================================== */
 
   parsedData =
     addDefaultDateTimes(
@@ -678,13 +640,7 @@ const create = async ({
 
   /* ==========================================================
      CONVERT DATETIME STRINGS
-
-     CORRECT ARGUMENT ORDER:
-
-     1. parsedData
-     2. dateTimeFields
-     3. model
-     ========================================================== */
+  ========================================================== */
 
   parsedData =
     convertDateFields(
@@ -695,8 +651,8 @@ const create = async ({
 
 
   /* ==========================================================
-     DEBUG PARSED DATA
-     ========================================================== */
+     DEBUG PREPARED DATA
+  ========================================================== */
 
   console.log(
     "========== CREATE DEBUG =========="
@@ -718,7 +674,7 @@ const create = async ({
   );
 
   console.log(
-    "PARSED DATA:",
+    "PREPARED DATA:",
     parsedData
   );
 
@@ -729,7 +685,7 @@ const create = async ({
 
   /* ==========================================================
      SPECIAL CREATE MODELS
-     ========================================================== */
+  ========================================================== */
 
   const SPECIAL_CREATE_MODELS = [
 
@@ -751,7 +707,7 @@ const create = async ({
 
   /* ==========================================================
      SPECIAL CREATE
-     ========================================================== */
+  ========================================================== */
 
   if (
     SPECIAL_CREATE_MODELS.includes(
@@ -767,20 +723,6 @@ const create = async ({
           console.log(
             "========== TRANSACTION START =========="
           );
-
-
-          /* ==================================================
-             IMPORTANT
-
-             DO NOT run addDefaultDateTimes()
-             again.
-
-             DO NOT run convertDateFields()
-             again.
-
-             parsedData has already been prepared
-             before entering the transaction.
-             ================================================== */
 
 
           const special =
@@ -830,7 +772,7 @@ const create = async ({
 
   /* ==========================================================
      NORMAL CREATE
-     ========================================================== */
+  ========================================================== */
 
   else {
 
@@ -855,7 +797,7 @@ const create = async ({
 
   /* ==========================================================
      CREATE CHECK
-     ========================================================== */
+  ========================================================== */
 
   if (
     !createdData
@@ -870,7 +812,7 @@ const create = async ({
 
   /* ==========================================================
      S3 MEDIA
-     ========================================================== */
+  ========================================================== */
 
   let media =
     null;
@@ -901,8 +843,8 @@ const create = async ({
 
 
   /* ==========================================================
-     FORMAT RESPONSE
-     ========================================================== */
+     FORMAT RESPONSE DATES
+  ========================================================== */
 
   const response =
     formatResponseDates(
@@ -912,7 +854,7 @@ const create = async ({
 
   /* ==========================================================
      MEDIA RESPONSE
-     ========================================================== */
+  ========================================================== */
 
   if (
     media &&
@@ -931,7 +873,7 @@ const create = async ({
 
   /* ==========================================================
      CLEAR CACHE
-     ========================================================== */
+  ========================================================== */
 
   await redisManager.invalidate(
     db,
@@ -941,7 +883,7 @@ const create = async ({
 
   /* ==========================================================
      FINAL RESPONSE
-     ========================================================== */
+  ========================================================== */
 
   return response;
 
@@ -1028,786 +970,7 @@ const resolveId = (req) => {
 
 
 
-const getRecords1 = async (
-  db,
-  modelName,
-  req,
-  {
-    filters = {},
-    include = {},
-    page = 1,
-    limit = 100
-  } = {},
-  prismaClient = null
-) => {
 
-  const client =
-    prismaClient || getDB(db);
-
-  const model =
-    getModel(modelName, db, client);
-
-  /* ============================================================
-     QUERY PARAMS
-  ============================================================ */
-
-  const {
-    page: queryPage,
-    limit: queryLimit,
-    id: queryId,
-    noCache,
-
-    sortBy,
-    sortOrder,
-    fields,
-    include: queryInclude,
-
-    count,
-    sum,
-    avg,
-    min,
-    max,
-    groupBy,
-
-    ...filterQuery
-
-  } = req.query;
-
-
-  /* ============================================================
-     ID RESOLUTION
-  ============================================================ */
-
-  const id =
-    req.params?.id ||
-    queryId ||
-    req.body?.id ||
-    null;
-
-
-  /* ============================================================
-     MODEL META
-  ============================================================ */
-
-  const dmmf =
-    await getModelMeta(db);
-
-  const modelMeta =
-    dmmf.datamodel.models.find(
-      (m) => m.name === modelName
-    );
-
-  if (!modelMeta) {
-    throw new Error(
-      `Model '${modelName}' not found`
-    );
-  }
-
-
-  const validFields =
-    modelMeta.fields.map(
-      (f) => f.name
-    );
-
-
-  const numericFields =
-    modelMeta.fields
-      .filter((f) =>
-        [
-          "Int",
-          "Float",
-          "Decimal",
-          "BigInt"
-        ].includes(f.type)
-      )
-      .map((f) => f.name);
-
-
-  const allowedParams = [
-    "page",
-    "limit",
-    "id",
-    "noCache",
-    "sortBy",
-    "sortOrder",
-    "fields",
-    "include",
-    "count",
-    "sum",
-    "avg",
-    "min",
-    "max",
-    "groupBy"
-  ];
-
-
-  const relationFilterFields =
-    Object.keys(
-      RELATION_FILTERS[modelName] || {}
-    );
-
-
-  const specialFields =
-    specialAllowedParams[modelName] || [];
-
-
-  /* ============================================================
-     VALIDATE QUERY PARAMETERS
-  ============================================================ */
-
-  Object.keys(req.query).forEach(
-    (param) => {
-
-      if (
-        allowedParams.includes(param) ||
-        validFields.includes(param) ||
-        relationFilterFields.includes(param) ||
-        specialFields.includes(param)
-      ) {
-        return;
-      }
-
-      throw new Error(
-        `Unknown query parameter: ${param}`
-      );
-    }
-  );
-
-
-  /* ============================================================
-     RELATION FIELDS
-  ============================================================ */
-
-  const relationFields =
-    modelMeta.fields
-      .filter(
-        (f) => f.kind === "object"
-      )
-      .map(
-        (f) => f.name
-      );
-
-
-  /* ============================================================
-     PAGINATION
-  ============================================================ */
-
-  page =
-    Number(
-      queryPage ?? page
-    );
-
-  limit =
-    Number(
-      queryLimit ?? limit
-    );
-
-
-  if (
-    !Number.isInteger(page) ||
-    page < 1
-  ) {
-    throw new Error(
-      "page must be a positive integer"
-    );
-  }
-
-
-  if (
-    !Number.isInteger(limit) ||
-    limit < 1 ||
-    limit > 100
-  ) {
-    throw new Error(
-      "limit must be an integer between 1 and 100"
-    );
-  }
-
-
-  const skip =
-    (page - 1) * limit;
-
-
-  /* ============================================================
-     QUERY PARSING
-  ============================================================ */
-
-  const parsedQuery =
-    parseQueryParams(
-      filterQuery,
-      modelMeta
-    );
-
-
-  console.log(
-    "RAW filterQuery:",
-    filterQuery
-  );
-
-  console.log(
-    "PARSED QUERY:",
-    parsedQuery
-  );
-
-
-  /* ============================================================
-     WHERE
-  ============================================================ */
-
-  const where =
-    buildNestedWhere(
-      modelName,
-      {
-        ...filters,
-        ...parsedQuery
-      },
-      RELATION_FILTERS,
-      dmmf
-    );
-
-
-  console.log(
-    "FINAL WHERE:",
-    JSON.stringify(
-      where,
-      null,
-      2
-    )
-  );
-
-
-  /* ============================================================
-     ORDER BY
-  ============================================================ */
-
-  let orderBy;
-
-
-  if (
-    sortOrder &&
-    !["asc", "desc"].includes(
-      sortOrder.toLowerCase()
-    )
-  ) {
-    throw new Error(
-      "sortOrder must be asc or desc"
-    );
-  }
-
-
-  if (sortBy) {
-
-    if (
-      !validFields.includes(sortBy)
-    ) {
-      throw new Error(
-        `Invalid sort field: ${sortBy}`
-      );
-    }
-
-
-    orderBy = {
-      [sortBy]:
-        sortOrder?.toLowerCase() === "desc"
-          ? "desc"
-          : "asc"
-    };
-  }
-
-
-  /* ============================================================
-     AGGREGATE CHECK
-  ============================================================ */
-
-  const hasAggregate =
-    count === "true" ||
-    sum ||
-    avg ||
-    min ||
-    max ||
-    groupBy;
-
-
-  const checkEmpty = (
-    value,
-    name
-  ) => {
-
-    if (
-      value !== undefined &&
-      value.trim() === ""
-    ) {
-      throw new Error(
-        `${name} cannot be empty`
-      );
-    }
-  };
-
-
-  checkEmpty(
-    fields,
-    "fields"
-  );
-
-  checkEmpty(
-    queryInclude,
-    "include"
-  );
-
-  checkEmpty(
-    sum,
-    "sum"
-  );
-
-  checkEmpty(
-    avg,
-    "avg"
-  );
-
-  checkEmpty(
-    min,
-    "min"
-  );
-
-  checkEmpty(
-    max,
-    "max"
-  );
-
-
-  /* ============================================================
-     CACHE KEY
-  ============================================================ */
-
-  const cacheKeyFilters = {
-
-    where,
-
-    page,
-
-    limit,
-
-    id,
-
-    fields,
-
-    include: queryInclude,
-
-    sortBy,
-
-    sortOrder
-  };
-
-
-  const useNoCache =
-    noCache === "true";
-
-
-  /* ============================================================
-     CACHE GET
-  ============================================================ */
-
-  if (!useNoCache) {
-
-    const start =
-      Date.now();
-
-
-    const cached =
-      await redisManager.get(
-        db,
-        modelName,
-        cacheKeyFilters
-      );
-
-
-    if (
-      cached !== null &&
-      cached !== undefined
-    ) {
-
-      console.log(
-        `⚡ CACHE HIT → ${modelName} (${Date.now() - start}ms)`
-      );
-
-
-      const isArray =
-        Array.isArray(cached);
-
-
-      return {
-
-        success: true,
-
-        source: "cache",
-
-        count:
-          isArray
-            ? cached.length
-            : cached
-              ? 1
-              : 0,
-
-        result:
-          isArray
-            ? cached
-            : cached
-              ? [cached]
-              : []
-      };
-    }
-
-
-    console.log(
-      `🐢 CACHE MISS → ${modelName}`
-    );
-  }
-
-
-  /* ============================================================
-     RELATIONS
-  ============================================================ */
-
-  let finalInclude =
-    buildRelations(
-      modelName,
-      dmmf
-    );
-
-
-  if (queryInclude) {
-
-    finalInclude = {};
-
-
-    queryInclude
-      .split(",")
-      .map(
-        (r) => r.trim()
-      )
-      .forEach(
-        (rel) => {
-
-          if (
-            !relationFields.includes(rel)
-          ) {
-            throw new Error(
-              `Invalid relation: ${rel}`
-            );
-          }
-
-
-          finalInclude[rel] = true;
-        }
-      );
-  }
-
-
-  /* ============================================================
-     TRANSFORM
-  ============================================================ */
-
-  const applyTransform =
-    (data) => {
-
-      if (!data) {
-        return [];
-      }
-
-
-      const dataArray =
-        Array.isArray(data)
-          ? data
-          : [data];
-
-
-      return flattenResponse(
-        dataArray,
-        modelName,
-        dmmf
-      );
-    };
-
-
-  let result;
-
-
-  /* ============================================================
-     AGGREGATE
-  ============================================================ */
-
-  if (hasAggregate) {
-
-    const aggregateArgs = {
-      where
-    };
-
-
-    if (count === "true") {
-      aggregateArgs._count = true;
-    }
-
-
-    const validateAggregateFields =
-      (
-        fields,
-        allowed,
-        operation
-      ) => {
-
-        fields
-          .split(",")
-          .map(
-            (f) => f.trim()
-          )
-          .forEach(
-            (field) => {
-
-              if (
-                !allowed.includes(field)
-              ) {
-                throw new Error(
-                  `${field} cannot be used with ${operation}`
-                );
-              }
-            }
-          );
-      };
-
-
-    if (sum) {
-
-      validateAggregateFields(
-        sum,
-        numericFields,
-        "sum"
-      );
-    }
-
-
-    if (avg) {
-
-      validateAggregateFields(
-        avg,
-        numericFields,
-        "avg"
-      );
-    }
-
-
-    if (min) {
-
-      validateAggregateFields(
-        min,
-        validFields,
-        "min"
-      );
-    }
-
-
-    if (max) {
-
-      validateAggregateFields(
-        max,
-        validFields,
-        "max"
-      );
-    }
-
-
-    result =
-      await model.aggregate(
-        aggregateArgs
-      );
-
-
-    return {
-
-      success: true,
-
-      source: "db",
-
-      result
-    };
-  }
-
-
-  /* ============================================================
-     SELECT
-  ============================================================ */
-
-  let select;
-
-
-  if (fields) {
-
-    const requested =
-      fields
-        .split(",")
-        .map(
-          (f) => f.trim()
-        );
-
-
-    requested.forEach(
-      (field) => {
-
-        if (
-          !validFields.includes(field)
-        ) {
-          throw new Error(
-            `Invalid field: ${field}`
-          );
-        }
-      }
-    );
-
-
-    select =
-      Object.fromEntries(
-        requested.map(
-          (field) => [
-            field,
-            true
-          ]
-        )
-      );
-  }
-
-
-  /* ============================================================
-     ID FILTER
-  ============================================================ */
-
-  if (id) {
-
-    where.id =
-      Number(id);
-  }
-
-
-  /* ============================================================
-     SPECIAL HANDLER
-  ============================================================ */
-
-  const specialResult =
-    await executeSpecialHandler(
-      modelName,
-      model,
-      where,
-      skip,
-      limit
-    );
-
-
-  /* ============================================================
-     FETCH
-  ============================================================ */
-
-  result =
-    specialResult ||
-    await model.findMany({
-
-      where,
-
-      ...(select
-        ? {
-            select
-          }
-        : {
-            include:
-              finalInclude
-          }),
-
-      orderBy,
-
-      skip,
-
-      take: limit
-    });
-
-
-  console.log(
-    "RAW PRISMA RESULT:",
-    JSON.stringify(
-      result,
-      null,
-      2
-    )
-  );
-
-
-  /* ============================================================
-     FLATTEN
-  ============================================================ */
-
-  const finalData =
-    applyTransform(result);
-
-
-  console.log(
-    "FINAL FLATTENED RESULT:",
-    JSON.stringify(
-      finalData,
-      null,
-      2
-    )
-  );
-
-
-  /* ============================================================
-     CACHE SET
-  ============================================================ */
-
-  if (!useNoCache) {
-
-    if (
-      finalData &&
-      finalData.length > 0
-    ) {
-
-      const key =
-        await redisManager.set(
-          db,
-          modelName,
-          cacheKeyFilters,
-          finalData
-        );
-
-
-      if (key) {
-
-        console.log(
-          `💾 CACHE SET → ${modelName}`
-        );
-      }
-
-    } else {
-
-      console.log(
-        `⚠️ SKIP CACHE EMPTY → ${modelName}`
-      );
-    }
-  }
-
-
-  /* ============================================================
-     FINAL RESPONSE
-  ============================================================ */
-
-  return {
-
-    success: true,
-
-    source: "db",
-
-    count:
-      finalData.length,
-
-    result:
-      finalData
-  };
-};
 
 
 const getRecords = async (
@@ -2747,820 +1910,6 @@ const getRecords = async (
 
 
 
-const update1 = async (
-  db,
-  modelName,
-  { id, where, data },
-  tx = null,
-  files = null
-) => {
-
-  const client = tx || getDB(db);
-  const model = getModel(modelName, db, client);
-
-  if ((!where || Object.keys(where).length === 0) && !id) {
-    throw new Error("Update requires where or id");
-  }
-
-  const recordId = id || where?.id;
-  const finalId = Number(recordId);
-
-  if (recordId && isNaN(finalId)) {
-    throw new Error("Invalid ID");
-  }
-
-  /* =====================================================
-     SPECIAL CASE: dy_pg_info
-  ===================================================== */
-
-  if (modelName === "dy_pg_info") {
-
-    const result = await handlePgInfoUpdate({
-      model,
-      recordId: finalId,
-      data,
-      files,
-      tx: client
-    });
-
-    if (!files || Object.keys(files).length === 0) {
-      delete result?.media;
-    }
-
-    return result;
-  }
-
-  /* =====================================================
-     SPECIAL CASE: dy_pg_kyc_info
-  ===================================================== */
-
-  if (modelName === "dy_pg_kyc_info") {
-
-    const result = await handlePgKycUpdate({
-      model,
-      recordId: finalId,
-      data,
-      files
-    });
-
-    if (!files || Object.keys(files).length === 0) {
-      delete result?.media;
-    }
-
-    return result;
-  }
-
-  /* =====================================================
-     🔥 SPECIAL CASE: dy_pg_bookings
-  ===================================================== */
-
-  if (modelName === "dy_pg_bookings") {
-
-    const updatedBooking = await handlePgBookingUpdate({
-      model,
-      recordId: finalId,
-      where,
-      data,
-      tx: client
-    });
-
-    // Optional media handling if bookings support files
-    let media = null;
-
-    if (files && Object.keys(files).length > 0) {
-      media = await handleMediaUploadAndUpdate({
-        model: modelName,
-        files,
-        createdData: updatedBooking,
-        prisma: client
-      });
-    }
-
-    const response = {
-      ...updatedBooking
-    };
-
-    if (media && (media.media || media)) {
-      response.media = media.media || media;
-    }
-
-    await redisManager.invalidate(db, model);
-
-    return response;
-  }
-
-  /* =====================================================
-     NORMAL UPDATE
-  ===================================================== */
-
-  const updatedData = await model.update({
-    where:
-      where && Object.keys(where).length
-        ? where
-        : { id: finalId },
-    data
-  });
-
-  /* =====================================================
-     FILE UPLOAD
-  ===================================================== */
-
-  let media = null;
-
-  if (files && Object.keys(files).length > 0) {
-    media = await handleMediaUploadAndUpdate({
-      model: modelName,
-      files,
-      createdData: updatedData,
-      prisma: client
-    });
-  }
-
-  /* =====================================================
-     FINAL RESPONSE
-  ===================================================== */
-
-  const response = {
-    ...updatedData
-  };
-
-  if (media && (media.media || media)) {
-    response.media = media.media || media;
-  }
-
-  await redisManager.invalidate(db, model);
-
-  return response;
-};
-
-
-
-
-const update2 = async (
-  db,
-  modelName,
-  {
-    id = null,
-    where = {},
-    data = {},
-    updates = []
-  },
-  tx = null,
-  files = null
-) => {
-
-  /**
-   * ============================================================
-   * DATABASE CLIENT
-   * ============================================================
-   *
-   * If transaction client exists:
-   *
-   *     tx
-   *      ↓
-   *     use tx
-   *
-   * Otherwise:
-   *
-   *     getDB(db)
-   *
-   * ============================================================
-   */
-  const client =
-    tx || getDB(db);
-
-  const model =
-    getModel(
-      modelName,
-      db,
-      client
-    );
-
-  console.log("\n================================================");
-  console.log("SERVICE UPDATE");
-  console.log("================================================");
-  console.log("DB:", db);
-  console.log("MODEL:", modelName);
-  console.log("ID:", id);
-  console.log("WHERE:", where);
-  console.log("DATA:", data);
-  console.log("UPDATES:", updates);
-  console.log("TRANSACTION:", !!tx);
-
-
-  /* ============================================================
-     BULK UPDATE
-     ============================================================ */
-
-  /**
-   * Bulk update is detected by:
-   *
-   * updates = [
-   *   {
-   *     id: 779,
-   *     data: {...}
-   *   }
-   * ]
-   *
-   * IMPORTANT:
-   *
-   * We don't check id/data here because a bulk request
-   * intentionally does not have a single top-level ID.
-   */
-  if (
-    Array.isArray(updates) &&
-    updates.length > 0
-  ) {
-
-    console.log(
-      "================================================"
-    );
-    console.log(
-      "BULK UPDATE START"
-    );
-    console.log(
-      "================================================"
-    );
-
-    /**
-     * ----------------------------------------------------------
-     * Only dy_payments_info currently supports this bulk flow
-     * ----------------------------------------------------------
-     */
-    if (
-      modelName !== "dy_payments_info"
-    ) {
-      throw new Error(
-        `Bulk update is not supported for model ${modelName}`
-      );
-    }
-
-    /**
-     * ----------------------------------------------------------
-     * Maximum 5 records
-     * ----------------------------------------------------------
-     */
-    if (
-      updates.length > 5
-    ) {
-      throw new Error(
-        "Maximum 5 payment records can be updated at a time"
-      );
-    }
-
-    const results = [];
-
-    /**
-     * ----------------------------------------------------------
-     * Process every update
-     * ----------------------------------------------------------
-     */
-    for (
-      let index = 0;
-      index < updates.length;
-      index++
-    ) {
-
-      const item =
-        updates[index];
-
-      console.log(
-        `\nProcessing bulk item ${index + 1}`
-      );
-
-      console.log(
-        "ITEM:",
-        item
-      );
-
-      /**
-       * --------------------------------------------------------
-       * Validate item
-       * --------------------------------------------------------
-       */
-      if (
-        !item ||
-        typeof item !== "object"
-      ) {
-        throw new Error(
-          `Invalid update item at index ${index}`
-        );
-      }
-
-      /**
-       * --------------------------------------------------------
-       * Validate ID or WHERE
-       * --------------------------------------------------------
-       */
-      const hasItemId =
-        item.id !== undefined &&
-        item.id !== null &&
-        item.id !== "";
-
-      const hasItemWhere =
-        item.where &&
-        typeof item.where === "object" &&
-        Object.keys(item.where).length > 0;
-
-      if (
-        !hasItemId &&
-        !hasItemWhere
-      ) {
-        throw new Error(
-          `Each payment update requires id or where at index ${index}`
-        );
-      }
-
-      /**
-       * --------------------------------------------------------
-       * Build WHERE
-       * --------------------------------------------------------
-       */
-      let updateWhere;
-
-      if (hasItemWhere) {
-        updateWhere =
-          item.where;
-      } else {
-        const numericId =
-          Number(item.id);
-
-        if (
-          !Number.isInteger(
-            numericId
-          ) ||
-          numericId <= 0
-        ) {
-          throw new Error(
-            `Invalid payment ID: ${item.id}`
-          );
-        }
-
-        updateWhere = {
-          id: numericId
-        };
-      }
-
-      /**
-       * --------------------------------------------------------
-       * If WHERE contains ID, validate it
-       * --------------------------------------------------------
-       */
-      if (
-        updateWhere.id !== undefined
-      ) {
-
-        const numericWhereId =
-          Number(
-            updateWhere.id
-          );
-
-        if (
-          !Number.isInteger(
-            numericWhereId
-          ) ||
-          numericWhereId <= 0
-        ) {
-          throw new Error(
-            `Invalid payment ID: ${updateWhere.id}`
-          );
-        }
-
-        updateWhere.id =
-          numericWhereId;
-      }
-
-      /**
-       * --------------------------------------------------------
-       * Validate data
-       * --------------------------------------------------------
-       */
-      if (
-        !item.data ||
-        typeof item.data !== "object" ||
-        Array.isArray(item.data) ||
-        Object.keys(item.data).length === 0
-      ) {
-        throw new Error(
-          `Update data is required for payment ${
-            item.id ?? index
-          }`
-        );
-      }
-
-      /**
-       * --------------------------------------------------------
-       * Debug
-       * --------------------------------------------------------
-       */
-      console.log(
-        "UPDATE WHERE:",
-        updateWhere
-      );
-
-      console.log(
-        "PAYMENT DATA:",
-        item.data
-      );
-
-      /**
-       * --------------------------------------------------------
-       * UPDATE DATABASE
-       * --------------------------------------------------------
-       */
-      const updatedPayment =
-        await model.update({
-          where: updateWhere,
-          data: item.data
-        });
-
-      /**
-       * --------------------------------------------------------
-       * Add result
-       * --------------------------------------------------------
-       */
-      results.push(
-        updatedPayment
-      );
-
-      console.log(
-        `PAYMENT UPDATED: ${
-          item.id ?? "WHERE"
-        }`
-      );
-    }
-
-    /**
-     * ----------------------------------------------------------
-     * Redis invalidation
-     *
-     * Only invalidate once after all updates.
-     * ----------------------------------------------------------
-     */
-    await redisManager.invalidate(
-      db,
-      model
-    );
-
-    console.log(
-      "\n================================================"
-    );
-    console.log(
-      "BULK UPDATE COMPLETE"
-    );
-    console.log(
-      "UPDATED:",
-      results.length
-    );
-    console.log(
-      "================================================"
-    );
-
-    return {
-      success: true,
-      count: results.length,
-      data: results
-    };
-  }
-
-
-  /* ============================================================
-     SINGLE UPDATE
-     ============================================================ */
-
-  /**
-   * IMPORTANT:
-   *
-   * This section is reached ONLY when there is no bulk
-   * `updates` array.
-   *
-   * Therefore this error will now correctly apply only
-   * to single updates.
-   */
-
-  const hasWhere =
-    where &&
-    typeof where === "object" &&
-    Object.keys(where).length > 0;
-
-  const hasId =
-    id !== undefined &&
-    id !== null &&
-    id !== "";
-
-  if (
-    !hasWhere &&
-    !hasId
-  ) {
-    throw new Error(
-      "Update requires where or id"
-    );
-  }
-
-  /**
-   * ------------------------------------------------------------
-   * Determine record ID
-   * ------------------------------------------------------------
-   */
-  const recordId =
-    hasId
-      ? id
-      : where?.id;
-
-  let finalId =
-    recordId !== undefined &&
-    recordId !== null
-      ? Number(recordId)
-      : null;
-
-  /**
-   * ------------------------------------------------------------
-   * Validate ID
-   * ------------------------------------------------------------
-   */
-  if (
-    recordId !== undefined &&
-    recordId !== null &&
-    recordId !== ""
-  ) {
-
-    if (
-      !Number.isInteger(finalId) ||
-      finalId <= 0
-    ) {
-      throw new Error(
-        `Invalid ID: ${recordId}`
-      );
-    }
-  }
-
-  /**
-   * ------------------------------------------------------------
-   * Validate data
-   * ------------------------------------------------------------
-   */
-  if (
-    !data ||
-    typeof data !== "object" ||
-    Array.isArray(data) ||
-    Object.keys(data).length === 0
-  ) {
-    throw new Error(
-      "Update data is required"
-    );
-  }
-
-  console.log(
-    "\n================================================"
-  );
-  console.log(
-    "SINGLE UPDATE START"
-  );
-  console.log(
-    "================================================"
-  );
-
-  console.log(
-    "MODEL:",
-    modelName
-  );
-
-  console.log(
-    "RECORD ID:",
-    finalId
-  );
-
-  console.log(
-    "WHERE:",
-    where
-  );
-
-  console.log(
-    "DATA:",
-    data
-  );
-
-
-  /* ============================================================
-     SPECIAL CASE: dy_pg_info
-     ============================================================ */
-
-  if (
-    modelName === "dy_pg_info"
-  ) {
-
-    const result =
-      await handlePgInfoUpdate({
-        model,
-        recordId: finalId,
-        data,
-        files,
-        tx: client
-      });
-
-    /**
-     * Don't return media when no files were uploaded.
-     */
-    if (
-      !files ||
-      Object.keys(files).length === 0
-    ) {
-      delete result?.media;
-    }
-
-    return result;
-  }
-
-
-  /* ============================================================
-     SPECIAL CASE: dy_pg_kyc_info
-     ============================================================ */
-
-  if (
-    modelName === "dy_pg_kyc_info"
-  ) {
-
-    const result =
-      await handlePgKycUpdate({
-        model,
-        recordId: finalId,
-        data,
-        files
-      });
-
-    /**
-     * Don't return media when no files were uploaded.
-     */
-    if (
-      !files ||
-      Object.keys(files).length === 0
-    ) {
-      delete result?.media;
-    }
-
-    return result;
-  }
-
-
-  /* ============================================================
-     SPECIAL CASE: dy_pg_bookings
-     ============================================================ */
-
-  if (
-    modelName === "dy_pg_bookings"
-  ) {
-
-    const updatedBooking =
-      await handlePgBookingUpdate({
-        model,
-        recordId: finalId,
-        where,
-        data,
-        tx: client
-      });
-
-    let media = null;
-
-    /**
-     * Upload files after booking update.
-     */
-    if (
-      files &&
-      Object.keys(files).length > 0
-    ) {
-
-      media =
-        await handleMediaUploadAndUpdate({
-          model: modelName,
-          files,
-          createdData: updatedBooking,
-          prisma: client
-        });
-    }
-
-    const response = {
-      ...updatedBooking
-    };
-
-    /**
-     * Add media if available.
-     */
-    if (
-      media &&
-      (
-        media.media ||
-        media
-      )
-    ) {
-      response.media =
-        media.media ||
-        media;
-    }
-
-    /**
-     * Invalidate cache.
-     */
-    await redisManager.invalidate(
-      db,
-      model
-    );
-
-    return response;
-  }
-
-
-  /* ============================================================
-     NORMAL UPDATE
-     ============================================================ */
-
-  /**
-   * Build WHERE condition.
-   */
-  const updateWhere =
-    hasWhere
-      ? where
-      : {
-          id: finalId
-        };
-
-  console.log(
-    "NORMAL UPDATE WHERE:",
-    updateWhere
-  );
-
-  /**
-   * Execute update.
-   */
-  const updatedData =
-    await model.update({
-      where: updateWhere,
-      data
-    });
-
-  /**
-   * ============================================================
-   * MEDIA
-   * ============================================================
-   */
-  let media = null;
-
-  if (
-    files &&
-    Object.keys(files).length > 0
-  ) {
-
-    media =
-      await handleMediaUploadAndUpdate({
-        model: modelName,
-        files,
-        createdData: updatedData,
-        prisma: client
-      });
-  }
-
-  /**
-   * ============================================================
-   * RESPONSE
-   * ============================================================
-   */
-  const response = {
-    ...updatedData
-  };
-
-  if (
-    media &&
-    (
-      media.media ||
-      media
-    )
-  ) {
-    response.media =
-      media.media ||
-      media;
-  }
-
-  /**
-   * ============================================================
-   * REDIS
-   * ============================================================
-   */
-  await redisManager.invalidate(
-    db,
-    model
-  );
-
-  console.log(
-    "\n================================================"
-  );
-  console.log(
-    "SINGLE UPDATE COMPLETE"
-  );
-  console.log(
-    "================================================"
-  );
-
-  return response;
-};
 
 
 const update = async (

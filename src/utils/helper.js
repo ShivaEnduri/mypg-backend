@@ -1048,66 +1048,190 @@ const formatIST = (date) => {
 /**
  * Get current date/time in India
  */
-const formatResponseDates = (obj) => {
 
-  if (!obj || typeof obj !== "object") {
-    return obj;
+
+const formatIndianDateTime = (
+  value
+) => {
+
+  if (
+    value === null ||
+    value === undefined
+  ) {
+
+    return value;
+
   }
 
-  const dateFields = [
-    "bkg_date",
-    "planned_check_in_date",
-    "actual_check_in_date",
-    "planned_check_out_date",
-    "actual_check_out_date",
-    "create_time",
-    "modified_time",
-  ];
 
-  // =====================================
-  // ARRAY
-  // =====================================
+  const date =
+    value instanceof Date
+      ? value
+      : new Date(value);
 
-  if (Array.isArray(obj)) {
-    return obj.map(formatResponseDates);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+
+    return value;
+
   }
 
-  const result = { ...obj };
 
-  for (const key in result) {
+  const parts =
+    new Intl.DateTimeFormat(
+      "en-GB",
+      {
+        timeZone:
+          INDIAN_TIMEZONE,
 
-    const value = result[key];
+        year:
+          "numeric",
 
-    if (value == null) {
-      continue;
-    }
+        month:
+          "2-digit",
 
-    // =====================================
-    // DATE FIELD
-    // =====================================
+        day:
+          "2-digit",
+
+        hour:
+          "2-digit",
+
+        minute:
+          "2-digit",
+
+        second:
+          "2-digit",
+
+        hourCycle:
+          "h23",
+      }
+    ).formatToParts(date);
+
+
+  const result = {};
+
+
+  for (
+    const part
+    of parts
+  ) {
 
     if (
-      dateFields.includes(key) &&
-      value instanceof Date
+      part.type !== "literal"
     ) {
-      result[key] = formatIST(value);
-      continue;
+
+      result[part.type] =
+        part.value;
+
     }
 
-    // =====================================
-    // NESTED OBJECT
-    // =====================================
-
-    if (
-      typeof value === "object" &&
-      !(value instanceof Date)
-    ) {
-      result[key] = formatResponseDates(value);
-    }
   }
 
-  return result;
+
+  return (
+    `${result.year}-${result.month}-${result.day} ` +
+    `${result.hour}:${result.minute}:${result.second}`
+  );
+
 };
+
+
+const formatResponseDates = (
+  data
+) => {
+
+  /* ==========================================================
+     NULL
+  ========================================================== */
+
+  if (
+    data === null ||
+    data === undefined
+  ) {
+
+    return data;
+
+  }
+
+
+  /* ==========================================================
+     DATE OBJECT
+  ========================================================== */
+
+  if (
+    data instanceof Date
+  ) {
+
+    return formatIndianDateTime(
+      data
+    );
+
+  }
+
+
+  /* ==========================================================
+     ARRAY
+  ========================================================== */
+
+  if (
+    Array.isArray(data)
+  ) {
+
+    return data.map(
+      item =>
+        formatResponseDates(
+          item
+        )
+    );
+
+  }
+
+
+  /* ==========================================================
+     OBJECT
+  ========================================================== */
+
+  if (
+    typeof data === "object"
+  ) {
+
+    const result = {};
+
+
+    for (
+      const [
+        key,
+        value
+      ]
+      of Object.entries(data)
+    ) {
+
+      result[key] =
+        formatResponseDates(
+          value
+        );
+
+    }
+
+
+    return result;
+
+  }
+
+
+  /* ==========================================================
+     NORMAL VALUE
+  ========================================================== */
+
+  return data;
+
+};
+
+
 
 
 const generateUniversalUserId = () => {
@@ -1132,1356 +1256,7 @@ const generateUniversalUserId = () => {
 };
 
 
-const handleSpecialCreate1 = async ({
-  modelName,
-  data,
-  prisma,
-  db,
-}) => {
 
-  /* ============================================================
-     1. CREATE PG
-  ============================================================ */
-
-  if (modelName === "dy_pg_info") {
-
-    const model =
-      getModel(
-        modelName,
-        db,
-        prisma
-      );
-
-
-    /* ==========================================================
-       FIND REVIEW STATUS
-    ========================================================== */
-
-    const reviewStatus =
-      await prisma.st_pg_cur_sts.findFirst({
-
-        where: {
-          status_code: "review",
-        },
-
-        select: {
-          id: true,
-        },
-
-      });
-
-
-    if (!reviewStatus) {
-
-      throw new Error(
-        "Default status 'review' not found"
-      );
-
-    }
-
-
-    /* ==========================================================
-       PG DATA
-    ========================================================== */
-
-    const createData = {
-
-      pg_name:
-        data.pg_name ?? null,
-
-      pg_owner:
-        data.pg_owner !== undefined &&
-        data.pg_owner !== null &&
-        data.pg_owner !== ""
-          ? Number(data.pg_owner)
-          : null,
-
-      pg_cat:
-        data.pg_cat !== undefined &&
-        data.pg_cat !== null &&
-        data.pg_cat !== ""
-          ? Number(data.pg_cat)
-          : null,
-
-      pg_type_id:
-        data.pg_type_id !== undefined &&
-        data.pg_type_id !== null &&
-        data.pg_type_id !== ""
-          ? Number(data.pg_type_id)
-          :
-          (
-            data.pg_type !== undefined &&
-            data.pg_type !== null &&
-            data.pg_type !== ""
-              ? Number(data.pg_type)
-              : null
-          ),
-
-      pg_desc_id:
-        data.pg_desc_id !== undefined &&
-        data.pg_desc_id !== null &&
-        data.pg_desc_id !== ""
-          ? Number(data.pg_desc_id)
-          :
-          (
-            data.pg_desc !== undefined &&
-            data.pg_desc !== null &&
-            data.pg_desc !== ""
-              ? Number(data.pg_desc)
-              : null
-          ),
-
-      pg_address:
-        data.pg_address ?? null,
-
-      pg_city:
-        data.pg_city !== undefined &&
-        data.pg_city !== null &&
-        data.pg_city !== ""
-          ? Number(data.pg_city)
-          : null,
-
-      pg_state:
-        data.pg_state !== undefined &&
-        data.pg_state !== null &&
-        data.pg_state !== ""
-          ? Number(data.pg_state)
-          : null,
-
-      pg_landmark:
-        data.pg_landmark ?? null,
-
-      pg_pincode:
-        data.pg_pincode !== undefined &&
-        data.pg_pincode !== null &&
-        data.pg_pincode !== ""
-          ? Number(data.pg_pincode)
-          : null,
-
-      pg_major_area:
-        data.pg_major_area ?? null,
-
-      pg_primary_contact_no:
-        data.pg_primary_contact_no ?? null,
-
-      pg_alternate_contact_no:
-        data.pg_alternate_contact_no ?? null,
-
-      pg_email:
-        data.pg_email ?? null,
-
-      pg_map_url:
-        data.pg_map_url ?? null,
-
-      pg_status:
-        reviewStatus.id,
-
-    };
-
-
-    /* ==========================================================
-       CREATE PG
-    ========================================================== */
-
-    const created =
-      await model.create({
-        data: createData,
-      });
-
-
-    /* ==========================================================
-       GET OWNER NAME
-    ========================================================== */
-
-    let ownerName = "unknown";
-
-
-    if (created.pg_owner) {
-
-      const owner =
-        await prisma.dy_user.findUnique({
-
-          where: {
-            id: Number(
-              created.pg_owner
-            ),
-          },
-
-          select: {
-            first_name: true,
-            last_name: true,
-          },
-
-        });
-
-
-      if (owner) {
-
-        ownerName =
-          owner.first_name ||
-          "unknown";
-
-
-        if (owner.last_name) {
-
-          ownerName =
-            ownerName +
-            "_" +
-            owner.last_name;
-
-        }
-
-      }
-
-    }
-
-
-    /* ==========================================================
-       PG NAME
-    ========================================================== */
-
-    const pgName =
-      String(
-        created.pg_name ?? "PG"
-      ).replace(
-        /\s+/g,
-        "_"
-      );
-
-
-    /* ==========================================================
-       GENERATE PG ID
-    ========================================================== */
-
-    const pg_id =
-      pgName +
-      "_" +
-      ownerName +
-      "_" +
-      created.id;
-
-
-    /* ==========================================================
-       UPDATE PG
-    ========================================================== */
-
-    const updated =
-      await model.update({
-
-        where: {
-          id: created.id,
-        },
-
-        data: {
-
-          pg_id:
-            pg_id,
-
-          pg_documents_path:
-            "Pgdata/" +
-            pg_id,
-
-        },
-
-      });
-
-
-    return {
-      data: updated,
-    };
-
-  }
-
-
-  /* ============================================================
-     2. USER → ROLE → GUEST → BOOKING
-  ============================================================ */
-
-  if (modelName === "dy_user") {
-
-    console.log(
-      "================================================"
-    );
-
-    console.log(
-      "USER + ROLE + GUEST + BOOKING CREATE"
-    );
-
-    console.log(
-      "================================================"
-    );
-
-
-    /* ==========================================================
-       SEPARATE NESTED DATA
-    ========================================================== */
-
-    const {
-      guest,
-      booking,
-      role_id,
-      ...userData
-    } = data;
-
-
-    /* ==========================================================
-       VALIDATION
-    ========================================================== */
-
-    if (!userData.first_name) {
-
-      throw new Error(
-        "first_name is required"
-      );
-
-    }
-
-
-    if (!userData.email_id) {
-
-      throw new Error(
-        "email_id is required"
-      );
-
-    }
-
-
-    if (!userData.mobile_no) {
-
-      throw new Error(
-        "mobile_no is required"
-      );
-
-    }
-
-
-    if (!guest) {
-
-      throw new Error(
-        "guest data is required"
-      );
-
-    }
-
-
-    if (!booking) {
-
-      throw new Error(
-        "booking data is required"
-      );
-
-    }
-
-
-    /* ==========================================================
-       1️⃣ GENERATE UNIQUE UNIVERSAL USER ID
-       
-       NO TRANSACTION HERE.
-       
-       prisma is already transaction client.
-    ========================================================== */
-
-    let univ_user_id;
-
-
-    do {
-
-      univ_user_id =
-        generateUniversalUserId();
-
-
-      const existingUser =
-        await prisma.dy_user.findFirst({
-
-          where: {
-            univ_user_id:
-              univ_user_id,
-          },
-
-          select: {
-            id: true,
-          },
-
-        });
-
-
-      if (!existingUser) {
-        break;
-      }
-
-    } while (true);
-
-
-    console.log(
-      "NEW univ_user_id:",
-      univ_user_id
-    );
-
-
-    /* ==========================================================
-       2️⃣ CREATE USER
-    ========================================================== */
-
-    const finalUserData = {
-
-      ...userData,
-
-      univ_user_id:
-        univ_user_id,
-
-      signuptime:
-        userData.signuptime
-          ? new Date(
-              userData.signuptime
-            )
-          : new Date(),
-
-      last_updated:
-        new Date(),
-
-    };
-
-
-    console.log(
-      "USER DATA:",
-      finalUserData
-    );
-
-
-    const createdUser =
-      await prisma.dy_user.create({
-
-        data:
-          finalUserData,
-
-      });
-
-
-    console.log(
-      "USER CREATED ID:",
-      createdUser.id
-    );
-
-
-    console.log(
-      "USER CREATED univ_user_id:",
-      createdUser.univ_user_id
-    );
-
-
-    /* ==========================================================
-       3️⃣ CREATE USER ROLE
-       
-       Default role = 4
-    ========================================================== */
-
-    const finalRoleId =
-      role_id !== undefined &&
-      role_id !== null &&
-      role_id !== ""
-        ? Number(role_id)
-        : 4;
-
-
-    const createdRole =
-      await prisma.dy_user_roles.create({
-
-        data: {
-
-          user_id:
-            createdUser.id,
-
-          role_id:
-            finalRoleId,
-
-        },
-
-      });
-
-
-    console.log(
-      "ROLE CREATED:",
-      createdRole
-    );
-
-
-    /* ==========================================================
-       4️⃣ VALIDATE GUEST PG
-    ========================================================== */
-
-    if (
-      guest.pg_id === undefined ||
-      guest.pg_id === null ||
-      guest.pg_id === ""
-    ) {
-
-      throw new Error(
-        "guest.pg_id is required"
-      );
-
-    }
-
-
-    /* ==========================================================
-       5️⃣ CREATE GUEST
-       
-       dy_user.id
-              ↓
-       dy_pg_guest_info.user_id
-    ========================================================== */
-
-    const guestData = {
-
-      guest_type:
-        guest.guest_type !== undefined &&
-        guest.guest_type !== null &&
-        guest.guest_type !== ""
-          ? Number(
-              guest.guest_type
-            )
-          : null,
-
-
-      guest_status:
-        guest.guest_status !== undefined &&
-        guest.guest_status !== null &&
-        guest.guest_status !== ""
-          ? Number(
-              guest.guest_status
-            )
-          : null,
-
-
-      perm_address:
-        guest.perm_address ??
-        null,
-
-
-      pg_id:
-        Number(
-          guest.pg_id
-        ),
-
-
-      user_id:
-        createdUser.id,
-
-
-      emergency_contact:
-        guest.emergency_contact ??
-        null,
-
-
-      emergency_contact_name:
-        guest.emergency_contact_name ??
-        null,
-
-    };
-
-
-    console.log(
-      "GUEST DATA:",
-      guestData
-    );
-
-
-    const createdGuest =
-      await prisma.dy_pg_guest_info.create({
-
-        data:
-          guestData,
-
-      });
-
-
-    console.log(
-      "GUEST CREATED ID:",
-      createdGuest.id
-    );
-
-
-    /* ==========================================================
-       6️⃣ VALIDATE BOOKING
-    ========================================================== */
-
-    if (
-      booking.pg_id === undefined ||
-      booking.pg_id === null ||
-      booking.pg_id === ""
-    ) {
-
-      throw new Error(
-        "booking.pg_id is required"
-      );
-
-    }
-
-
-   
-
-
-   
-
-
-    /* ==========================================================
-       7️⃣ GENERATE BOOKING NUMBER
-    ========================================================== */
-
-    const indiaDate =
-      getIndiaDateString();
-
-
-    const datePart =
-      indiaDate.replace(
-        /-/g,
-        ""
-      );
-
-
-    const bookingPrefix =
-      "BKG-" +
-      datePart +
-      "-";
-
-
-    console.log(
-      "BOOKING PREFIX:",
-      bookingPrefix
-    );
-
-
-    /* ==========================================================
-       FIND LAST BOOKING
-    ========================================================== */
-
-    const lastBooking =
-      await prisma.dy_pg_bookings.findFirst({
-
-        where: {
-
-          bkg_no: {
-
-            startsWith:
-              bookingPrefix,
-
-          },
-
-        },
-
-        orderBy: {
-
-          id:
-            "desc",
-
-        },
-
-        select: {
-
-          bkg_no:
-            true,
-
-        },
-
-      });
-
-
-    /* ==========================================================
-       NEXT SEQUENCE
-    ========================================================== */
-
-    let sequence = 1;
-
-
-    if (
-      lastBooking &&
-      lastBooking.bkg_no
-    ) {
-
-      const parts =
-        lastBooking.bkg_no.split("-");
-
-
-      const lastSequence =
-        Number(
-          parts[2]
-        );
-
-
-      if (
-        !Number.isNaN(
-          lastSequence
-        )
-      ) {
-
-        sequence =
-          lastSequence + 1;
-
-      }
-
-    }
-
-
-    /* ==========================================================
-       BOOKING NUMBER
-    ========================================================== */
-
-    const bkg_no =
-      bookingPrefix +
-      String(
-        sequence
-      ).padStart(
-        3,
-        "0"
-      );
-
-
-    console.log(
-      "GENERATED BOOKING NUMBER:",
-      bkg_no
-    );
-
-
-    /* ==========================================================
-       8️⃣ CREATE BOOKING
-       
-       dy_pg_guest_info.id
-              ↓
-       dy_pg_bookings.guest_id
-    ========================================================== */
-
-    const bookingData = {
-
-      bkg_no:
-        bkg_no,
-
-
-      pg_id:
-        Number(
-          booking.pg_id
-        ),
-
-
-      
-
-
-
-
-      planned_check_in_date:
-        booking.planned_check_in_date
-          ? new Date(
-              booking.planned_check_in_date
-            )
-          : null,
-
-
-     
-
-
-      planned_check_out_date:
-        booking.planned_check_out_date
-          ? new Date(
-              booking.planned_check_out_date
-            )
-          : null,
-
-
-     
-
-
-      bkg_status:
-        booking.bkg_status !== undefined &&
-        booking.bkg_status !== null &&
-        booking.bkg_status !== ""
-          ? Number(
-              booking.bkg_status
-            )
-          : null,
-
-
-      create_time:
-        new Date(),
-
-
-     
-
-
-      created_by:
-        booking.created_by !== undefined &&
-        booking.created_by !== null &&
-        booking.created_by !== ""
-          ? Number(
-              booking.created_by
-            )
-          : createdUser.id,
-
-
-      modified_by:
-        booking.modified_by !== undefined &&
-        booking.modified_by !== null &&
-        booking.modified_by !== ""
-          ? Number(
-              booking.modified_by
-            )
-          : null,
-
-
-      remarks:
-        booking.remarks ??
-        null,
-
-
-      monthly_rent:
-        booking.monthly_rent !== undefined &&
-        booking.monthly_rent !== null &&
-        booking.monthly_rent !== ""
-          ? Number(
-              booking.monthly_rent
-            )
-          : null,
-
-
-      secuirty_deposit:
-        booking.secuirty_deposit !== undefined &&
-        booking.secuirty_deposit !== null &&
-        booking.secuirty_deposit !== ""
-          ? Number(
-              booking.secuirty_deposit
-            )
-          : null,
-
-
-     
-
-
-     
-
-
-      
-
-
-    
-
-
-
-     
-
-
-      notice_period_time:
-        booking.notice_period_time !== undefined &&
-        booking.notice_period_time !== null &&
-        booking.notice_period_time !== ""
-          ? Number(
-              booking.notice_period_time
-            )
-          : null,
-
-
-      /* ======================================================
-         IMPORTANT FOREIGN KEY
-         
-         guest.id → booking.guest_id
-      ====================================================== */
-
-      guest_id:
-        createdGuest.id,
-
-    };
-
-
-    console.log(
-      "BOOKING DATA:",
-      bookingData
-    );
-
-
-    /* ==========================================================
-       CREATE BOOKING
-    ========================================================== */
-
-    const createdBooking =
-      await prisma.dy_pg_bookings.create({
-
-        data:
-          bookingData,
-
-      });
-
-
-    console.log(
-      "BOOKING CREATED ID:",
-      createdBooking.id
-    );
-
-
-    /* ==========================================================
-       RETURN
-    ========================================================== */
-
-    return {
-
-      data: {
-
-        user:
-          createdUser,
-
-        role:
-          createdRole,
-
-        guest:
-          createdGuest,
-
-        booking:
-          createdBooking,
-
-      },
-
-    };
-
-  }
-
-
-  /* ============================================================
-     3. STANDALONE BOOKING CREATE
-  ============================================================ */
-
-  if (modelName === "dy_pg_bookings") {
-
-    const model =
-      getModel(
-        modelName,
-        db,
-        prisma
-      );
-
-
-    /* ==========================================================
-       INDIA DATE
-    ========================================================== */
-
-    const indiaDate =
-      getIndiaDateString();
-
-
-    const datePart =
-      indiaDate.replace(
-        /-/g,
-        ""
-      );
-
-
-    const bookingPrefix =
-      "BKG-" +
-      datePart +
-      "-";
-
-
-    /* ==========================================================
-       FIND LAST BOOKING
-    ========================================================== */
-
-    const lastBooking =
-      await model.findFirst({
-
-        where: {
-
-          bkg_no: {
-
-            startsWith:
-              bookingPrefix,
-
-          },
-
-        },
-
-        orderBy: {
-
-          id:
-            "desc",
-
-        },
-
-        select: {
-
-          bkg_no:
-            true,
-
-        },
-
-      });
-
-
-    /* ==========================================================
-       SEQUENCE
-    ========================================================== */
-
-    let sequence = 1;
-
-
-    if (
-      lastBooking &&
-      lastBooking.bkg_no
-    ) {
-
-      const parts =
-        lastBooking.bkg_no.split("-");
-
-
-      const lastSequence =
-        Number(
-          parts[2]
-        );
-
-
-      if (
-        !Number.isNaN(
-          lastSequence
-        )
-      ) {
-
-        sequence =
-          lastSequence + 1;
-
-      }
-
-    }
-
-
-    /* ==========================================================
-       BOOKING NUMBER
-    ========================================================== */
-
-    const bkg_no =
-      bookingPrefix +
-      String(
-        sequence
-      ).padStart(
-        3,
-        "0"
-      );
-
-
-    /* ==========================================================
-       CREATE DATA
-    ========================================================== */
-
-    const createData = {
-
-      ...data,
-
-      bkg_no:
-        bkg_no,
-
-      create_time:
-        new Date(),
-
-    };
-
-
-    /* ==========================================================
-       CONVERT DATE FIELDS
-    ========================================================== */
-
-    const dateFields = [
-
-      "bkg_date",
-
-      "planned_check_in_date",
-
-      "actual_check_in_date",
-
-      "planned_check_out_date",
-
-      "actual_check_out_date",
-
-      "create_time",
-
-      "modified_time",
-
-    ];
-
-
-    for (
-      const field of dateFields
-    ) {
-
-      if (
-        createData[field] &&
-        typeof createData[field] ===
-          "string"
-      ) {
-
-        createData[field] =
-          new Date(
-            createData[field]
-          );
-
-      }
-
-    }
-
-
-    /* ==========================================================
-       CREATE BOOKING
-    ========================================================== */
-
-    const created =
-      await model.create({
-
-        data:
-          createData,
-
-      });
-
-
-    return {
-
-      data:
-        created,
-
-    };
-
-  }
-/* ============================================================
-   4. CREATE PG ALERT
-============================================================ */
-
-if (modelName === "dy_pg_alerts") {
-
-  console.log(
-    "================================================"
-  );
-
-  console.log(
-    "PG ALERT CREATE"
-  );
-
-  console.log(
-    "================================================"
-  );
-
-
-  /* ==========================================================
-     VALIDATE REQUIRED FIELDS
-  ========================================================== */
-
-  if (
-    data.alert_cat === undefined ||
-    data.alert_cat === null ||
-    data.alert_cat === ""
-  ) {
-
-    throw new Error(
-      "alert_cat is required"
-    );
-
-  }
-
-
-  if (
-    data.alert_receiver_role === undefined ||
-    data.alert_receiver_role === null ||
-    data.alert_receiver_role === ""
-  ) {
-
-    throw new Error(
-      "alert_receiver_role is required"
-    );
-
-  }
-
-
-  if (
-    data.alert_title === undefined ||
-    data.alert_title === null ||
-    data.alert_title === ""
-  ) {
-
-    throw new Error(
-      "alert_title is required"
-    );
-
-  }
-
-
-  if (
-    data.alert_priority === undefined ||
-    data.alert_priority === null ||
-    data.alert_priority === ""
-  ) {
-
-    throw new Error(
-      "alert_priority is required"
-    );
-
-  }
-
-
-  if (
-    data.pg_id === undefined ||
-    data.pg_id === null ||
-    data.pg_id === ""
-  ) {
-
-    throw new Error(
-      "pg_id is required"
-    );
-
-  }
-
-
-  if (
-    data.alert_status === undefined ||
-    data.alert_status === null ||
-    data.alert_status === ""
-  ) {
-
-    throw new Error(
-      "alert_status is required"
-    );
-
-  }
-
-
-  /* ==========================================================
-     ALERT RECEIVER
-
-     If passed:
-       alert_receiver = 15
-       → save 15
-
-     If not passed:
-       alert_receiver = undefined
-
-     We do NOT automatically assign a receiver.
-  ========================================================== */
-
-  let alertReceiver = null;
-
-
-  if (
-    data.alert_receiver !== undefined &&
-    data.alert_receiver !== null &&
-    data.alert_receiver !== ""
-  ) {
-
-    alertReceiver =
-      Number(
-        data.alert_receiver
-      );
-
-
-    if (
-      !Number.isInteger(
-        alertReceiver
-      ) ||
-      alertReceiver <= 0
-    ) {
-
-      throw new Error(
-        "alert_receiver must be a valid positive integer"
-      );
-
-    }
-
-  }
-
-
-  /* ==========================================================
-     CREATE ALERT DATA
-  ========================================================== */
-
-  const alertData = {
-
-    alert_cat:
-      Number(
-        data.alert_cat
-      ),
-
-
-    alert_receiver_role:
-      Number(
-        data.alert_receiver_role
-      ),
-
-
-    alert_receiver:
-      alertReceiver,
-
-
-    alert_title:
-      data.alert_title,
-
-
-    alert_description:
-      data.alert_description ??
-      null,
-
-
-    alert_priority:
-      Number(
-        data.alert_priority
-      ),
-
-
-    pg_id:
-      Number(
-        data.pg_id
-      ),
-
-
-    alert_status:
-      Number(
-        data.alert_status
-      ),
-
-  };
-
-
-  console.log(
-    "FINAL ALERT DATA:",
-    alertData
-  );
-
-
-  /* ==========================================================
-     CREATE ALERT
-  ========================================================== */
-
-  const createdAlert =
-    await prisma.dy_pg_alerts.create({
-
-      data:
-        alertData,
-
-    });
-
-
-  console.log(
-    "ALERT CREATED:",
-    createdAlert
-  );
-
-
-  /* ==========================================================
-     RETURN
-  ========================================================== */
-
-  return {
-
-    data:
-      createdAlert,
-
-  };
-
-}
-
-  /* ============================================================
-     NO SPECIAL CREATE
-  ============================================================ */
-
-  return null;
-
-};
 
 const handleSpecialCreate = async ({
   modelName,
@@ -3347,14 +2122,14 @@ if (modelName === "dy_payments_info") {
             )
           : null,
 
-      bkg_status:
-        booking.bkg_status !== undefined &&
-        booking.bkg_status !== null &&
-        booking.bkg_status !== ""
-          ? Number(
-              booking.bkg_status
-            )
-          : null,
+     bkg_status:
+  booking.bkg_status !== undefined &&
+  booking.bkg_status !== null &&
+  booking.bkg_status !== ""
+    ? Number(
+        booking.bkg_status
+      )
+    : 4,
 
       create_time:
         new Date(),
@@ -4511,62 +3286,6 @@ const handlePgKycUpdate = async ({ model, recordId, data, files }) => {
   };
 };
 
- export const parseQueryParams1 = (query = {}, modelMeta) => {
-  const parsed = {};
-
-  const RESERVED = new Set([
-    "count",
-    "sum",
-    "avg",
-    "min",
-    "max",
-    "groupBy",
-    "sortBy",
-    "sortOrder",
-    "fields",
-    "include",
-    "page",
-    "limit",
-    "id",
-    "noCache"
-  ]);
-
-  for (const [key, value] of Object.entries(query)) {
-
-    // ==========================================
-    // RESERVED QUERY PARAMETERS
-    // ==========================================
-
-    if (RESERVED.has(key)) {
-      continue;
-    }
-
-    // ==========================================
-    // UNKNOWN FIELD
-    // ==========================================
-
-    const field = modelMeta?.fields?.find(
-      f => f.name === key
-    );
-
-    if (!field) {
-      parsed[key] = value;
-      continue;
-    }
-
-    // ==========================================
-    // KEEP RAW VALUE
-    //
-    // IMPORTANT:
-    // Type conversion is handled by
-    // buildNestedWhere() using Prisma DMMF.
-    // ==========================================
-
-    parsed[key] = value;
-  }
-
-  return parsed;
-};
 
 
 export const parseQueryParams = (query, modelMeta) => {
@@ -4854,12 +3573,16 @@ export const parseQueryParams = (query, modelMeta) => {
 // INDIAN CURRENT DATE TIME
 // ============================================================
 
+
+const INDIAN_TIMEZONE = "Asia/Kolkata";
+
+
 const getIndianDateTime = () => {
 
   const now = new Date();
 
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
+    timeZone: INDIAN_TIMEZONE,
 
     year: "numeric",
     month: "2-digit",
@@ -4894,9 +3617,9 @@ const getIndianDateTime = () => {
 };
 
 
-// ============================================================
-// CHECK VALID DATE STRING
-// ============================================================
+/* ============================================================
+   CHECK VALID DATE VALUE
+============================================================ */
 
 const isValidDateValue = (value) => {
 
@@ -4913,9 +3636,19 @@ const isValidDateValue = (value) => {
 
   const date = new Date(value);
 
-  return !isNaN(date.getTime());
+  return !Number.isNaN(
+    date.getTime()
+  );
 
 };
+
+
+
+// ============================================================
+// CHECK VALID DATE STRING
+// ============================================================
+
+
 
 
 // ============================================================
@@ -5024,6 +3757,9 @@ const getDateTimeFields = (
 // 5. Works for every Prisma model
 // ============================================================
 
+
+
+
 const addDefaultDateTimes = (
   prisma,
   modelName,
@@ -5049,16 +3785,20 @@ const addDefaultDateTimes = (
 
 
   console.log(
-    `DateTime fields for ${modelName}:`,
+    `Adding default DateTimes for ${modelName}:`,
     dateTimeFields
   );
 
 
-  for (const fieldName of dateTimeFields) {
+  for (
+    const fieldName
+    of dateTimeFields
+  ) {
 
-    // ========================================================
-    // FRONTEND DID NOT SEND FIELD
-    // ========================================================
+
+    /* ========================================================
+       FIELD NOT SENT
+    ======================================================== */
 
     if (
       !Object.prototype.hasOwnProperty.call(
@@ -5067,69 +3807,101 @@ const addDefaultDateTimes = (
       )
     ) {
 
-      data[fieldName] =
+      const indianDateTime =
         getIndianDateTime();
 
+
+      data[fieldName] =
+        indianDateTime;
+
+
       console.log(
-        `Default Indian datetime added: ${modelName}.${fieldName} = ${data[fieldName]}`
+        `Default Indian datetime added: ${modelName}.${fieldName} = ${indianDateTime}`
       );
+
 
       continue;
 
     }
 
 
-    // ========================================================
-    // FRONTEND SENT NULL
-    //
-    // Respect explicit null.
-    // ========================================================
+    /* ========================================================
+       NULL
+    ======================================================== */
 
-    if (data[fieldName] === null) {
+    if (
+      data[fieldName] === null
+    ) {
 
       console.log(
         `Keeping NULL: ${modelName}.${fieldName}`
       );
 
+
       continue;
 
     }
 
 
-    // ========================================================
-    // FRONTEND SENT EMPTY STRING
-    //
-    // Treat empty string as missing.
-    // ========================================================
+    /* ========================================================
+       EMPTY STRING
+    ======================================================== */
 
-    if (data[fieldName] === "") {
+    if (
+      data[fieldName] === ""
+    ) {
 
-      data[fieldName] =
+      const indianDateTime =
         getIndianDateTime();
 
+
+      data[fieldName] =
+        indianDateTime;
+
+
       console.log(
-        `Empty datetime replaced: ${modelName}.${fieldName} = ${data[fieldName]}`
+        `Empty datetime replaced: ${modelName}.${fieldName} = ${indianDateTime}`
       );
+
 
       continue;
 
     }
 
 
-    // ========================================================
-    // FRONTEND SENT DATETIME
-    //
-    // Keep it.
-    // ========================================================
+    /* ========================================================
+       VALID FRONTEND DATETIME
+    ======================================================== */
 
     if (
       typeof data[fieldName] === "string" &&
-      isValidDateValue(data[fieldName])
+      isValidDateValue(
+        data[fieldName]
+      )
     ) {
 
       console.log(
         `Keeping frontend datetime: ${modelName}.${fieldName} = ${data[fieldName]}`
       );
+
+
+      continue;
+
+    }
+
+
+    /* ========================================================
+       DATE OBJECT
+    ======================================================== */
+
+    if (
+      data[fieldName] instanceof Date
+    ) {
+
+      console.log(
+        `Keeping Date object: ${modelName}.${fieldName}`
+      );
+
 
       continue;
 
@@ -5141,6 +3913,8 @@ const addDefaultDateTimes = (
   return data;
 
 };
+
+
 
 
 // ============================================================
